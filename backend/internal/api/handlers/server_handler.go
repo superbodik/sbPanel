@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -95,6 +96,7 @@ func (h *ServerHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	client, err := h.NodeClient(req.NodeID)
 	if err != nil {
+		log.Printf("servers.create: node %d client unavailable: %v", req.NodeID, err)
 		http.Error(w, "node unavailable", http.StatusBadGateway)
 		return
 	}
@@ -162,6 +164,11 @@ func (h *ServerHandler) Create(w http.ResponseWriter, r *http.Request) {
 		PortBindings:   portBindings,
 	})
 	if err != nil || !daemonResp.Success {
+		if err != nil {
+			log.Printf("servers.create: daemon call failed for node %d: %v", req.NodeID, err)
+		} else {
+			log.Printf("servers.create: daemon rejected create for node %d: %s", req.NodeID, daemonResp.Message)
+		}
 		http.Error(w, "daemon failed to create server", http.StatusBadGateway)
 		return
 	}

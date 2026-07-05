@@ -315,6 +315,32 @@ building one wasn't justified).
     this function is ever touched, since it's the entire security boundary
     between "browser typed a path" and "daemon process root-owns the
     host's real filesystem."
+16. **Every `.sfield` in a form must be `input`, `textarea`, or `select` —
+    `panel.css`'s `.sfield input, .sfield textarea` rule silently didn't
+    cover `select`, so every dropdown (Create Server's Node/Egg/Allocation,
+    Schedules' Action, Nodes' allocation-node picker) rendered as an
+    unstyled native browser control instead of the dark theme. Fixed by
+    adding `select` to the same rule plus a custom SVG-arrow via
+    `appearance: none`. If a future form control type shows up in an
+    `.sfield` (e.g. a native `<input type="date">` or a checkbox), check
+    it against this same rule rather than assuming `.sfield` styling is
+    automatic — it only covers what's explicitly listed.
+17. **A handler-local `log.Printf` right before an `http.Error` 5xx/502
+    response is what makes a live-production failure diagnosable later** —
+    `ServerHandler.Create`'s two 502 branches (node client unavailable,
+    daemon rejected/failed the create call) previously discarded the real
+    Go error entirely, so the frontend only ever showed "POST /servers
+    failed: 502" with no way to tell "wrong daemon token" from "wingsd
+    unreachable" from "node has no stored token" apart. Added
+    `log.Printf` at both sites (see `internal/scheduler`/`internal/ws` for
+    the established `"<component>: <what> failed: %v"` format this
+    follows). **Watch out**: when logging an error alongside a value that
+    came from the same failed call, guard against a nil pointer — e.g.
+    `daemonclient.CreateServer` returns `(nil, err)` on failure, so logging
+    `daemonResp.Success` unconditionally would nil-deref exactly when
+    `err != nil`, i.e. exactly the case the log line exists to describe.
+    Branch on `err != nil` first and only touch the response value in the
+    other branch.
 
 ## Roadmap — rough priority order
 
