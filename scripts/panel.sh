@@ -10,16 +10,17 @@ build_panel_binaries() {
 
 	mkdir -p "$PANEL_INSTALL_DIR"
 
-	local commit build_date
+	local version commit build_date
+	version=$(cat "${PROJECT_ROOT}/VERSION" 2>/dev/null || echo "0.0.0-dev")
 	commit=$(git -C "$PROJECT_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)
 	build_date=$(date -u +%FT%TZ)
 
 	log_step "Building backend"
-	(cd "${PROJECT_ROOT}/backend" && go build -ldflags "-X main.commit=${commit} -X main.buildDate=${build_date}" -o "${PANEL_INSTALL_DIR}/panel" ./cmd/panel) \
+	(cd "${PROJECT_ROOT}/backend" && go build -ldflags "-X main.version=${version} -X main.commit=${commit} -X main.buildDate=${build_date}" -o "${PANEL_INSTALL_DIR}/panel" ./cmd/panel) \
 		|| die "Backend build failed"
 	(cd "${PROJECT_ROOT}/backend" && go build -o "${PANEL_INSTALL_DIR}/panel-admin" ./cmd/panel-admin) \
 		|| die "panel-admin build failed"
-	log_ok "Backend binaries: ${PANEL_INSTALL_DIR}/panel, ${PANEL_INSTALL_DIR}/panel-admin (${commit})"
+	log_ok "Backend binaries: ${PANEL_INSTALL_DIR}/panel, ${PANEL_INSTALL_DIR}/panel-admin (v${version}, ${commit})"
 
 	log_step "Building frontend"
 	(cd "${PROJECT_ROOT}/frontend" && npm ci --silent && npm run build --silent) \

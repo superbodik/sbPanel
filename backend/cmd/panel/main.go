@@ -26,6 +26,7 @@ import (
 )
 
 var (
+	version   = "0.0.0-dev"
 	commit    = "unknown"
 	buildDate = "unknown"
 )
@@ -92,6 +93,7 @@ func main() {
 		NodeClient:    resolveNodeClient,
 		EncryptionKey: cfg.EncryptionKey,
 		Limiter:       limiter,
+		Version:       version,
 		Commit:        commit,
 		BuildDate:     buildDate,
 		SourceDir:     cfg.SourceDir,

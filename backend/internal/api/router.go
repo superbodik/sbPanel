@@ -28,6 +28,7 @@ type Dependencies struct {
 	NodeClient    func(nodeID int64) (*daemonclient.Client, error)
 	EncryptionKey string
 	Limiter       *ratelimit.Limiter
+	Version       string
 	Commit        string
 	BuildDate     string
 	SourceDir     string
@@ -67,6 +68,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	nodeHandler := &handlers.NodeHandler{DB: deps.DB, EncryptionKey: deps.EncryptionKey, NodeClient: deps.NodeClient}
 	serverHandler := &handlers.ServerHandler{DB: deps.DB, NodeClient: deps.NodeClient, Subusers: subusers}
 	versionHandler := &handlers.VersionHandler{
+		Version:   deps.Version,
 		Commit:    deps.Commit,
 		BuildDate: deps.BuildDate,
 		SourceDir: deps.SourceDir,

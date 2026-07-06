@@ -43,7 +43,11 @@ export function Settings() {
           <div className="settings-card-title">Version</div>
           <div className="settings-grid">
             <div className="sfield">
-              <label>Current commit</label>
+              <label>Version</label>
+              <input readOnly value={version ? `v${version.version}` : '…'} />
+            </div>
+            <div className="sfield">
+              <label>Commit</label>
               <input readOnly value={version?.commit ?? '…'} />
             </div>
             <div className="sfield">
@@ -65,8 +69,8 @@ export function Settings() {
               {updateCheck.update_available ? (
                 <>
                   <p className="srv-desc" style={{ marginBottom: 8 }}>
-                    Update available: <strong>{updateCheck.current_commit}</strong> →{' '}
-                    <strong>{updateCheck.latest_commit}</strong>. Run this on the panel's server:
+                    Update available: <strong>v{updateCheck.current_version}</strong> →{' '}
+                    <strong>v{updateCheck.latest_version}</strong>. Run this on the panel's server:
                   </p>
                   <div className="api-item">
                     <span className="api-key">{updateCommand(version?.source_dir ?? '')}</span>
@@ -81,7 +85,7 @@ export function Settings() {
                   </div>
                 </>
               ) : (
-                <p className="srv-desc">You're up to date ({updateCheck.current_commit}).</p>
+                <p className="srv-desc">You're up to date (v{updateCheck.current_version}).</p>
               )}
             </div>
           )}

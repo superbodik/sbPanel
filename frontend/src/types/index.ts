@@ -89,6 +89,7 @@ export interface CreateNodeResponse {
 }
 
 export interface VersionInfo {
+  version: string;
   commit: string;
   build_date: string;
   source_dir: string;
@@ -96,8 +97,8 @@ export interface VersionInfo {
 }
 
 export interface UpdateCheck {
-  current_commit: string;
-  latest_commit: string;
+  current_version: string;
+  latest_version: string;
   update_available: boolean;
 }
 

@@ -919,6 +919,26 @@ actually flow into the create form.
     means. When adding scoping to an existing nullable/default-empty
     column, work out what the *current* rows' behavior is first, then
     pick the encoding that doesn't silently change it.
+21. **Releases are versioned now — every commit is not a "release."**
+    Before this, `VersionHandler.CheckUpdate` compared raw commit SHAs
+    against GitHub's `main`, so "update available" was true after
+    *literally any* commit — there was no such thing as a deliberate
+    release boundary, just a constant stream of builds. There's now a
+    `VERSION` file at repo root (plain semver, e.g. `0.1.0`), embedded
+    into the `panel` binary via the same `-ldflags -X` mechanism that
+    already handled `commit`/`buildDate` (`scripts/panel.sh`'s
+    `build_panel_binaries`), and `CheckUpdate` now fetches
+    `raw.githubusercontent.com/.../main/VERSION` and compares *that*,
+    not commit hashes. **The process this enables**: keep committing and
+    pushing after each feature/fix like always — that's day-to-day work,
+    not a release — but only bump `VERSION` and `git tag vX.Y.Z` at an
+    actual milestone (a batch of related work that's been built, verified,
+    and is worth calling a version), then push the tag
+    (`git push origin vX.Y.Z`). Users only see "update available" when a
+    tagged version bump lands on `main`, not on every commit in between.
+    Patch (`0.1.x`) for bug/security fixes, minor (`0.x.0`) for new
+    features, following ordinary semver; stay under `1.0.0` until the
+    product is actually stable enough to promise compatibility.
 
 ## Roadmap — rough priority order
 
