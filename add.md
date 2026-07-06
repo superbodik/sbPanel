@@ -1237,3 +1237,24 @@ actually flow into the create form.
   rewrite reflecting current reality plus badges, a feature table, and the
   same competitive-comparison framing as the new landing page, instead of
   a rebrand copy grafted onto stale content.
+- **Full uninstall (`uninstall_full`) left PostgreSQL in a state that broke
+  every subsequent reinstall** — confirmed live on a real box, not
+  theoretical. `apt-get purge` named only the `postgresql`/`postgresql-contrib`
+  metapackages; the actual versioned engine (`postgresql-16` on Ubuntu
+  24.04, plus `postgresql-client-16`/`postgresql-common`) is a separate
+  package that `apt-get autoremove` didn't reliably catch either — so it
+  stayed fully installed, with its cluster config still sitting in
+  `/etc/postgresql/16/main`, right next to the unconditional
+  `rm -rf /var/lib/postgresql` two lines down that deletes the actual data
+  directory. Net result: a cluster whose config exists (so `pg_lsclusters`
+  reports it and the installer's recovery path tries to `service
+  postgresql restart` it) but whose data directory is gone, which can
+  never come back up. On the next `install.sh` run, `postgresql`/
+  `postgresql-contrib` were already "installed" as far as apt was
+  concerned, so nothing re-triggered `pg_createcluster`, and
+  `wait_for_postgres` failed outright. Fixed by discovering every
+  installed `postgresql*` package with `dpkg-query` and purging all of
+  them by name instead of guessing two, plus explicitly removing
+  `/etc/postgresql`, `/etc/postgresql-common` and `/var/log/postgresql`
+  in the cleanup `rm -rf` rather than trusting purge to have caught
+  everything.

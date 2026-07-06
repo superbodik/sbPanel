@@ -49,11 +49,14 @@ uninstall_full() {
 
 	log_step "Purging Docker, PostgreSQL, Redis, nginx packages and their data"
 	systemctl stop docker postgresql redis-server nginx 2>/dev/null
+	local pg_packages
+	pg_packages=$(dpkg-query -W -f '${Package}\n' 'postgresql*' 2>/dev/null)
 	apt-get purge -y -qq docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
-		postgresql postgresql-contrib redis-server nginx nginx-common certbot python3-certbot-nginx 2>/dev/null
+		${pg_packages} redis-server nginx nginx-common certbot python3-certbot-nginx 2>/dev/null
 	apt-get autoremove -y -qq 2>/dev/null
 	rm -rf /var/lib/docker /var/lib/containerd /var/lib/postgresql /var/lib/redis \
-		/var/lib/wingsd /etc/panel /etc/wingsd /etc/nginx/sites-available/panel
+		/var/lib/wingsd /etc/panel /etc/wingsd /etc/nginx/sites-available/panel \
+		/etc/postgresql /etc/postgresql-common /var/log/postgresql
 
 	log_step "Resetting firewall"
 	require_command ufw && ufw --force reset >/dev/null 2>&1
