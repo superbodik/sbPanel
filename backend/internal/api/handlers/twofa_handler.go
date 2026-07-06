@@ -2,19 +2,29 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/yourorg/panel/internal/activity"
 	"github.com/yourorg/panel/internal/auth"
 	"github.com/yourorg/panel/internal/crypto"
+	"github.com/yourorg/panel/internal/ratelimit"
 )
 
 type TwoFAHandler struct {
 	DB            *pgxpool.Pool
 	EncryptionKey string
+	Limiter       *ratelimit.Limiter
 }
+
+const (
+	twofaVerifyRateLimit  = 10
+	twofaVerifyRateWindow = 15 * time.Minute
+)
 
 func (h *TwoFAHandler) Status(w http.ResponseWriter, r *http.Request) {
 	claims, ok := auth.FromContext(r.Context())
@@ -72,6 +82,15 @@ func (h *TwoFAHandler) Verify(w http.ResponseWriter, r *http.Request) {
 	claims, ok := auth.FromContext(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	allowed, err := h.Limiter.Allow(r.Context(),
+		"ratelimit:2fa-verify:"+strconv.FormatInt(claims.UserID, 10), twofaVerifyRateLimit, twofaVerifyRateWindow)
+	if err != nil {
+		log.Printf("ratelimit: 2fa verify check failed, allowing request: %v", err)
+	} else if !allowed {
+		http.Error(w, "too many attempts — try again later", http.StatusTooManyRequests)
 		return
 	}
 

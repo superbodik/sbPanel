@@ -20,6 +20,7 @@ import (
 	"github.com/yourorg/panel/internal/daemonclient"
 	"github.com/yourorg/panel/internal/db"
 	"github.com/yourorg/panel/internal/models"
+	"github.com/yourorg/panel/internal/ratelimit"
 	"github.com/yourorg/panel/internal/scheduler"
 	"github.com/yourorg/panel/internal/ws"
 )
@@ -43,6 +44,7 @@ func main() {
 
 	tokenManager := auth.NewTokenManager(cfg.JWTSecret, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 	resolveNodeClient := nodeClientResolver(pool, cfg.EncryptionKey)
+	limiter := ratelimit.New(cfg.RedisAddr, cfg.RedisPassword)
 
 	resolveServerClient := func(ctx context.Context, serverUUID uuid.UUID) (*daemonclient.Client, error) {
 		var nodeID int64
@@ -89,6 +91,7 @@ func main() {
 		Hub:           hub,
 		NodeClient:    resolveNodeClient,
 		EncryptionKey: cfg.EncryptionKey,
+		Limiter:       limiter,
 		Commit:        commit,
 		BuildDate:     buildDate,
 		SourceDir:     cfg.SourceDir,

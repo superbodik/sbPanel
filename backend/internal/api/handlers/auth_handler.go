@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -10,12 +12,32 @@ import (
 	"github.com/yourorg/panel/internal/activity"
 	"github.com/yourorg/panel/internal/auth"
 	"github.com/yourorg/panel/internal/crypto"
+	"github.com/yourorg/panel/internal/ratelimit"
 )
 
 type AuthHandler struct {
 	DB            *pgxpool.Pool
 	Token         *auth.TokenManager
 	EncryptionKey string
+	Limiter       *ratelimit.Limiter
+}
+
+const (
+	loginRateLimit  = 10
+	loginRateWindow = 15 * time.Minute
+)
+
+func (h *AuthHandler) checkLoginRateLimit(w http.ResponseWriter, r *http.Request) bool {
+	allowed, err := h.Limiter.Allow(r.Context(), "ratelimit:login:"+activity.RequestIP(r), loginRateLimit, loginRateWindow)
+	if err != nil {
+		log.Printf("ratelimit: login check failed, allowing request: %v", err)
+		return true
+	}
+	if !allowed {
+		http.Error(w, "too many login attempts — try again later", http.StatusTooManyRequests)
+		return false
+	}
+	return true
 }
 
 type loginRequest struct {
@@ -35,6 +57,10 @@ type tokenResponse struct {
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+	if !h.checkLoginRateLimit(w, r) {
+		return
+	}
+
 	var req loginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)

@@ -438,6 +438,51 @@ someone hits it, and then invisible *again* until the frontend can show
 what actually broke — worth remembering alongside the error-surfacing
 fix above, since neither one alone would have made this findable.
 
+**A quick security pass turned up two real vulnerabilities and one
+piece of already-provisioned infrastructure that was sitting completely
+unused.**
+- `config.Load()` defaulted `PANEL_JWT_SECRET` to the literal string
+  `"change-me-in-production"` and `PANEL_ENCRYPTION_KEY` to `""` if
+  either env var wasn't set. The installer always generates real random
+  values for both (`scripts/panel.sh`), so this fallback should never
+  fire in the normal flow — but that string is now sitting in a *public*
+  GitHub repo, and any install where the env var didn't get loaded
+  (missing `panel.env`, a broken systemd `EnvironmentFile`, running the
+  binary directly without it) would silently start up with a
+  **publicly-known JWT-signing secret**, letting anyone forge an admin
+  token. `config.Load()` now calls `log.Fatal` if either is unset or
+  still equals the known-bad default — fail closed, not open. This is
+  the same class of mistake as `install.sh`'s cwd-deletion bug earlier
+  this session: a fallback that's "safe" in the intended path becomes
+  a real hole the moment something upstream doesn't go as planned.
+- **Redis was fully provisioned (installed, health-checked, written into
+  `panel.env`) and never once connected to from Go code.** `config.go`
+  had `RedisAddr`/`RedisPassword` fields that nothing read. Meanwhile
+  `/auth/login` and `/account/2fa/verify` had zero rate limiting —
+  unlimited password guesses and, for accounts with 2FA on, unlimited
+  6-digit TOTP-code guesses. New `internal/ratelimit` package (`Limiter.Allow`,
+  a plain Redis `INCR`+`EXPIRE` fixed-window counter) is now checked at
+  the top of both: 10 attempts per 15 minutes, keyed by client IP for
+  login and by user ID for 2FA verify. **Deliberately fails open**: if
+  Redis is unreachable, the check logs the error and allows the request
+  rather than locking everyone out of login because a secondary defense-
+  in-depth layer is down — rate limiting is one layer, not the only one
+  (bcrypt + TOTP still apply regardless). Known gap: this only throttles
+  by IP, not by target account, so a distributed brute force against one
+  specific victim's email from many IPs isn't caught — would need a
+  second, account-keyed limiter to close that, not implemented yet.
+- **Watch out when adding a Redis client dependency**: `go get
+  github.com/redis/go-redis/v9@latest` silently bumped `go.mod`'s `go`
+  directive from `1.22` to `1.24`, because the latest go-redis requires
+  it — but `scripts/toolchain.sh` only provisions Go `1.22.5` on fresh
+  installs, so that upgrade would have broken every install's build.
+  Pinned to `v9.14.0` (last version compatible with `go 1.22`) and
+  manually restored the `go` directive after `go mod tidy` tried to bump
+  it again. Check `go.mod`'s `go` line after *any* `go get`/`go mod tidy`
+  against what `scripts/toolchain.sh`'s `GO_VERSION` actually installs —
+  a passing local build doesn't catch this since the local toolchain is
+  usually newer than what's pinned for fresh installs.
+
 **Once the frontend could actually display backend error text (previous
 entry), the next problem was that some backend messages were still
 deliberately vague.** `ServerHandler.Create`/`Power`'s "node unavailable"

@@ -17,6 +17,7 @@ import (
 	"github.com/yourorg/panel/internal/api/handlers"
 	"github.com/yourorg/panel/internal/auth"
 	"github.com/yourorg/panel/internal/daemonclient"
+	"github.com/yourorg/panel/internal/ratelimit"
 	"github.com/yourorg/panel/internal/ws"
 )
 
@@ -26,6 +27,7 @@ type Dependencies struct {
 	Hub           *ws.Hub
 	NodeClient    func(nodeID int64) (*daemonclient.Client, error)
 	EncryptionKey string
+	Limiter       *ratelimit.Limiter
 	Commit        string
 	BuildDate     string
 	SourceDir     string
@@ -49,7 +51,7 @@ func NewRouter(deps Dependencies) http.Handler {
 
 	subusers := auth.NewSubuserChecker(deps.DB)
 
-	authHandler := &handlers.AuthHandler{DB: deps.DB, Token: deps.Token, EncryptionKey: deps.EncryptionKey}
+	authHandler := &handlers.AuthHandler{DB: deps.DB, Token: deps.Token, EncryptionKey: deps.EncryptionKey, Limiter: deps.Limiter}
 	nodeHandler := &handlers.NodeHandler{DB: deps.DB, EncryptionKey: deps.EncryptionKey, NodeClient: deps.NodeClient}
 	serverHandler := &handlers.ServerHandler{DB: deps.DB, NodeClient: deps.NodeClient, Subusers: subusers}
 	versionHandler := &handlers.VersionHandler{
@@ -64,7 +66,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	apiKeyHandler := &handlers.APIKeyHandler{DB: deps.DB}
 	fileHandler := &handlers.FileHandler{DB: deps.DB, NodeClient: deps.NodeClient, Subusers: subusers}
 	scheduleHandler := &handlers.ScheduleHandler{DB: deps.DB, Subusers: subusers}
-	twofaHandler := &handlers.TwoFAHandler{DB: deps.DB, EncryptionKey: deps.EncryptionKey}
+	twofaHandler := &handlers.TwoFAHandler{DB: deps.DB, EncryptionKey: deps.EncryptionKey, Limiter: deps.Limiter}
 	subuserHandler := &handlers.SubuserHandler{DB: deps.DB}
 	userHandler := &handlers.UserHandler{DB: deps.DB}
 
