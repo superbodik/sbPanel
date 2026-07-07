@@ -22,6 +22,8 @@ const (
 	PermDatabasesWrite = "databases.write"
 	PermDomainsRead    = "domains.read"
 	PermDomainsWrite   = "domains.write"
+	PermBackupsRead    = "backups.read"
+	PermBackupsWrite   = "backups.write"
 
 	PermServersRead  = "servers.read"
 	PermServersWrite = "servers.write"

@@ -85,6 +85,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	databaseHostHandler := &handlers.DatabaseHostHandler{DB: deps.DB, EncryptionKey: deps.EncryptionKey}
 	serverDatabaseHandler := &handlers.ServerDatabaseHandler{DB: deps.DB, Subusers: subusers, Encrypt: deps.EncryptionKey}
 	serverDomainHandler := &handlers.ServerDomainHandler{DB: deps.DB, Subusers: subusers, NodeClient: deps.NodeClient}
+	serverBackupHandler := &handlers.ServerBackupHandler{DB: deps.DB, Subusers: subusers, NodeClient: deps.NodeClient}
 	sshKeyHandler := &handlers.SSHKeyHandler{DB: deps.DB}
 	sftpAuthHandler := &handlers.SFTPAuthHandler{DB: deps.DB, Subusers: subusers, EncryptionKey: deps.EncryptionKey}
 
@@ -137,6 +138,9 @@ func NewRouter(deps Dependencies) http.Handler {
 
 			r.Get("/servers/{uuid}/domains", serverDomainHandler.List)
 
+			r.Get("/servers/{uuid}/backups", serverBackupHandler.List)
+			r.Delete("/servers/{uuid}/backups/{id}", serverBackupHandler.Delete)
+
 			r.Get("/servers/{uuid}/subusers", subuserHandler.List)
 			r.Post("/servers/{uuid}/subusers", subuserHandler.Create)
 			r.Patch("/servers/{uuid}/subusers/{id}", subuserHandler.Update)
@@ -173,6 +177,10 @@ func NewRouter(deps Dependencies) http.Handler {
 
 			r.Post("/servers/{uuid}/domains", serverDomainHandler.Create)
 			r.Delete("/servers/{uuid}/domains/{id}", serverDomainHandler.Delete)
+
+			r.Post("/servers/{uuid}/backups", serverBackupHandler.Create)
+			r.Post("/servers/{uuid}/backups/{id}/restore", serverBackupHandler.Restore)
+			r.Get("/servers/{uuid}/backups/{id}/download", serverBackupHandler.Download)
 		})
 	})
 

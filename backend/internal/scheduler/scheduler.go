@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -136,6 +137,46 @@ func execute(pool *pgxpool.Pool, resolveNodeClient NodeClientResolver, scheduleI
 			if err := client.SendCommand(ctx, serverUUID, t.Payload); err != nil {
 				log.Printf("scheduler: schedule %d: command %q failed: %v", scheduleID, t.Payload, err)
 			}
+		case "backup":
+			name := t.Payload
+			if name == "" {
+				name = "scheduled-" + time.Now().UTC().Format("2006-01-02T15-04-05Z")
+			}
+			if err := runScheduledBackup(ctx, pool, client, serverID, serverUUID, name); err != nil {
+				log.Printf("scheduler: schedule %d: backup failed: %v", scheduleID, err)
+			}
 		}
 	}
+}
+
+func runScheduledBackup(ctx context.Context, pool *pgxpool.Pool, client *daemonclient.Client, serverID int64, serverUUID uuid.UUID, name string) error {
+	var backupLimit, count int
+	if err := pool.QueryRow(ctx, `SELECT backup_limit FROM servers WHERE id = $1`, serverID).Scan(&backupLimit); err != nil {
+		return err
+	}
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM server_backups WHERE server_id = $1`, serverID).Scan(&count); err != nil {
+		return err
+	}
+	if count >= backupLimit {
+		return fmt.Errorf("backup limit (%d) reached", backupLimit)
+	}
+
+	backupUUID := uuid.New()
+	var id int64
+	if err := pool.QueryRow(ctx,
+		`INSERT INTO server_backups (uuid, server_id, name) VALUES ($1, $2, $3) RETURNING id`,
+		backupUUID, serverID, name,
+	).Scan(&id); err != nil {
+		return err
+	}
+
+	resp, err := client.CreateBackup(ctx, serverUUID, daemonclient.CreateBackupRequest{BackupUUID: backupUUID.String()})
+	if err != nil {
+		return fmt.Errorf("backup %d recorded but daemon call failed: %w", id, err)
+	}
+
+	_, err = pool.Exec(ctx,
+		`UPDATE server_backups SET bytes = $1, checksum = $2, is_successful = true, completed_at = now() WHERE id = $3`,
+		resp.Bytes, resp.Checksum, id)
+	return err
 }

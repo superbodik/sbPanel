@@ -43,7 +43,7 @@ func main() {
 		}
 	}()
 
-	router := api.NewRouter(dockerManager, consoleHub, cfg.DaemonToken)
+	router := api.NewRouter(dockerManager, consoleHub, cfg.DaemonToken, cfg.BackupDir)
 
 	srv := &http.Server{
 		Addr:    cfg.HTTPAddr,

@@ -13,8 +13,9 @@ import (
 )
 
 type Handlers struct {
-	Docker  *docker.Manager
-	Console *console.Hub
+	Docker    *docker.Manager
+	Console   *console.Hub
+	BackupDir string
 }
 
 type createServerRequest struct {

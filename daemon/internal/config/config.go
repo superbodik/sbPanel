@@ -13,6 +13,7 @@ type Config struct {
 	PanelURL     string
 	SFTPAddr     string
 	SFTPHostKey  string
+	BackupDir    string
 }
 
 func Load() Config {
@@ -27,6 +28,7 @@ func Load() Config {
 		PanelURL:     os.Getenv("WINGSD_PANEL_URL"),
 		SFTPAddr:     getEnv("WINGSD_SFTP_ADDR", ":2022"),
 		SFTPHostKey:  getEnv("WINGSD_SFTP_HOST_KEY", "/etc/wingsd/sftp_host_key"),
+		BackupDir:    getEnv("WINGSD_BACKUP_DIR", "/var/lib/wingsd/backups"),
 	}
 }
 

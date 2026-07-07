@@ -237,6 +237,8 @@ export const SUBUSER_PERMISSIONS: { code: string; label: string }[] = [
   { code: 'databases.write', label: 'Manage databases' },
   { code: 'domains.read', label: 'View domains' },
   { code: 'domains.write', label: 'Manage domains' },
+  { code: 'backups.read', label: 'View backups' },
+  { code: 'backups.write', label: 'Manage backups' },
 ];
 
 export const API_KEY_PERMISSIONS: { code: string; label: string }[] = [
@@ -274,6 +276,18 @@ export interface ServerDomain {
   id: number;
   domain: string;
   tls_status: string;
+  created_at: string;
+}
+
+export interface ServerBackup {
+  id: number;
+  uuid: string;
+  name: string;
+  ignored_files: string[];
+  bytes: number;
+  checksum?: string;
+  is_successful: boolean;
+  completed_at: string | null;
   created_at: string;
 }
 

@@ -22,7 +22,7 @@ func maxBodySize(limit int64) func(http.Handler) http.Handler {
 	}
 }
 
-func NewRouter(dockerManager *docker.Manager, consoleHub *console.Hub, daemonToken string) http.Handler {
+func NewRouter(dockerManager *docker.Manager, consoleHub *console.Hub, daemonToken, backupDir string) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Logger)
@@ -37,7 +37,7 @@ func NewRouter(dockerManager *docker.Manager, consoleHub *console.Hub, daemonTok
 	r.Group(func(r chi.Router) {
 		r.Use(RequireDaemonToken(daemonToken))
 
-		h := &Handlers{Docker: dockerManager, Console: consoleHub}
+		h := &Handlers{Docker: dockerManager, Console: consoleHub, BackupDir: backupDir}
 
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Timeout(60 * time.Second))
@@ -62,6 +62,11 @@ func NewRouter(dockerManager *docker.Manager, consoleHub *console.Hub, daemonTok
 			r.Use(middleware.Timeout(150 * time.Second))
 			r.Post("/api/v1/servers/{uuid}/domains", h.AddDomain)
 			r.Delete("/api/v1/servers/{uuid}/domains/{domain}", h.RemoveDomain)
+
+			r.Post("/api/v1/servers/{uuid}/backups", h.CreateBackup)
+			r.Post("/api/v1/servers/{uuid}/backups/{backup_uuid}/restore", h.RestoreBackup)
+			r.Delete("/api/v1/servers/{uuid}/backups/{backup_uuid}", h.DeleteBackup)
+			r.Get("/api/v1/servers/{uuid}/backups/{backup_uuid}/download", h.DownloadBackup)
 		})
 
 		r.Get("/ws/servers/{uuid}", h.ConsoleSocket)

@@ -1411,3 +1411,58 @@ actually flow into the create form.
     requires, so a provisioned 1.22.5 install is not actually stuck or
     broken by a higher `go` directive. Left it at whatever `go mod tidy`
     naturally resolved to rather than fighting it.
+- Implemented real backups — `server_backups` had a fully-designed schema
+  (`ignored_files`, `bytes`, `checksum`, `is_successful`, `completed_at`)
+  since the very first migration, referenced in `docs/DATABASE.md`'s own
+  entity notes, but had zero handler, zero daemon logic, and zero UI
+  anywhere — the exact same "reserved but never built" shape as SFTP.
+  - **Daemon** (`daemon/internal/backup`): `Create` walks the server's
+    volume directory and streams it straight through `tar` → `gzip` →
+    the destination file *and* a SHA-256 hasher simultaneously via
+    `io.MultiWriter` (no double-buffering an entire server's files in
+    memory), matching `ignored_files` glob patterns against both the
+    full relative path and the basename so a pattern like `cache` (a
+    directory) or `*.log` (an extension) both work as expected. `Restore`
+    extracts back into the server directory using the exact same
+    "prepend a leading slash, then `filepath.Clean`, then verify the
+    result via `filepath.Rel`" containment trick `files.SafeJoin` already
+    uses elsewhere in this codebase — a hostile or corrupted archive
+    can't write outside the server's own directory (zip-slip class of
+    bug). Verified both properties with real tests, not just reasoning
+    about the code: `TestCreateAndRestore` round-trips actual files
+    through create→restore and checks the SHA-256 the code reports
+    against an independently-computed one; `TestRestoreRejectsPathTraversal`
+    builds a hand-crafted malicious tar entry (`../../../../etc/passwd`)
+    and confirms it lands safely inside the restore directory instead of
+    escaping to the real filesystem root — this test caught a wrong
+    assumption on the first pass (I originally expected `Restore` to
+    return an error for such an entry; the actual, correct, already-
+    proven-safe behavior is to silently neutralize and contain it, same
+    as `SafeJoin` does — the test forced the assertion to match reality
+    instead of my initial guess).
+  - **Panel**: `ServerBackupHandler` (list/create/restore/delete/download),
+    gated by new `backups.read`/`backups.write` permissions and the
+    existing `backup_limit` column (quota was already on `servers`, also
+    unused until now). Create/restore/download sit in the same 150-second
+    timeout group already carved out for the domains feature's certbot
+    calls, since archiving a large server is exactly the same "legitimately
+    slow node-side operation" shape — reused the pattern instead of
+    re-deriving it. Extracted the daemon-token-verification logic
+    (decrypt this specific node's stored token, constant-time-compare
+    against what was presented) out of the SFTP auth handler into a
+    small shared `internal/daemonauth` package, since this handler needed
+    the exact same check a second time — a genuine reuse opportunity, not
+    a hypothetical one.
+  - **Scheduler**: added a `"backup"` action alongside the existing
+    `"power"`/`"command"` ones, so "nightly backup" is a real schedulable
+    task now instead of just power actions and console commands.
+  - **Frontend**: new "Backups" tab (`BackupManager.tsx`, modeled on
+    `DomainManager.tsx`), and a third schedulable task type in
+    `ScheduleManager.tsx`. Failed backups show as "Failed" with
+    Download/Restore disabled rather than silently pretending to be
+    downloadable — `is_successful` was always meant to record failures
+    for visibility, not just gate a success flag nobody reads.
+  - Verified the whole chain end-to-end with a real browser (Playwright,
+    mocked API): created a backup through the actual form, confirmed the
+    right payload reached the API, and confirmed a failed backup renders
+    with disabled actions instead of a broken-looking enabled button.

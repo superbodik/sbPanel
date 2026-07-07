@@ -237,6 +237,54 @@ func (c *Client) RemoveDomain(ctx context.Context, serverUUID uuid.UUID, domain 
 	return c.doJSONWith(c.longHTTP, ctx, http.MethodDelete, path, nil, nil)
 }
 
+type CreateBackupRequest struct {
+	BackupUUID   string   `json:"backup_uuid"`
+	IgnoredFiles []string `json:"ignored_files"`
+}
+
+type CreateBackupResponse struct {
+	Bytes    int64  `json:"bytes"`
+	Checksum string `json:"checksum"`
+}
+
+func (c *Client) CreateBackup(ctx context.Context, serverUUID uuid.UUID, req CreateBackupRequest) (*CreateBackupResponse, error) {
+	var resp CreateBackupResponse
+	path := fmt.Sprintf("/api/v1/servers/%s/backups", serverUUID)
+	if err := c.doJSONWith(c.longHTTP, ctx, http.MethodPost, path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+func (c *Client) RestoreBackup(ctx context.Context, serverUUID uuid.UUID, backupUUID string) error {
+	path := fmt.Sprintf("/api/v1/servers/%s/backups/%s/restore", serverUUID, backupUUID)
+	return c.doJSONWith(c.longHTTP, ctx, http.MethodPost, path, nil, nil)
+}
+
+func (c *Client) DeleteBackup(ctx context.Context, serverUUID uuid.UUID, backupUUID string) error {
+	path := fmt.Sprintf("/api/v1/servers/%s/backups/%s", serverUUID, backupUUID)
+	return c.doJSONWith(c.http, ctx, http.MethodDelete, path, nil, nil)
+}
+
+func (c *Client) DownloadBackup(ctx context.Context, serverUUID uuid.UUID, backupUUID string) (io.ReadCloser, error) {
+	path := fmt.Sprintf("/api/v1/servers/%s/backups/%s/download", serverUUID, backupUUID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.daemonToken)
+
+	resp, err := c.longHTTP.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("call node daemon: %w", err)
+	}
+	if resp.StatusCode >= 400 {
+		resp.Body.Close()
+		return nil, fmt.Errorf("node daemon returned %d", resp.StatusCode)
+	}
+	return resp.Body, nil
+}
+
 func (c *Client) doJSON(ctx context.Context, method, path string, body, out interface{}) error {
 	return c.doJSONWith(c.http, ctx, method, path, body, out)
 }

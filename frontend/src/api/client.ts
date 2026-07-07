@@ -18,6 +18,7 @@ import type {
   PowerAction,
   Schedule,
   Server,
+  ServerBackup,
   ServerDatabase,
   ServerDomain,
   SSHKey,
@@ -251,6 +252,23 @@ export const api = {
 
   deleteServerDomain: (uuid: string, id: number) =>
     request<void>(`/servers/${uuid}/domains/${id}`, { method: 'DELETE' }),
+
+  listServerBackups: (uuid: string) => request<ServerBackup[]>(`/servers/${uuid}/backups`),
+
+  createServerBackup: (uuid: string, name: string, ignoredFiles: string[]) =>
+    request<ServerBackup>(`/servers/${uuid}/backups`, {
+      method: 'POST',
+      body: JSON.stringify({ name, ignored_files: ignoredFiles }),
+    }),
+
+  restoreServerBackup: (uuid: string, id: number) =>
+    request<void>(`/servers/${uuid}/backups/${id}/restore`, { method: 'POST' }),
+
+  deleteServerBackup: (uuid: string, id: number) =>
+    request<void>(`/servers/${uuid}/backups/${id}`, { method: 'DELETE' }),
+
+  downloadServerBackup: (uuid: string, id: number) =>
+    requestBlob(`/servers/${uuid}/backups/${id}/download`),
 
   getVersion: () => request<VersionInfo>('/version'),
 

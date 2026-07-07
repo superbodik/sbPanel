@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"crypto/subtle"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -9,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/yourorg/panel/internal/auth"
-	"github.com/yourorg/panel/internal/crypto"
+	"github.com/yourorg/panel/internal/daemonauth"
 )
 
 type SFTPAuthHandler struct {
@@ -43,25 +42,19 @@ func (h *SFTPAuthHandler) Authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var serverID, ownerID int64
+	var serverID, ownerID, nodeID int64
 	var serverUUID string
-	var tokenEncrypted *string
 	if err := h.DB.QueryRow(r.Context(), `
-		SELECT s.id, s.owner_id, s.uuid, n.daemon_token_encrypted
+		SELECT s.id, s.owner_id, s.uuid, n.id
 		FROM servers s JOIN nodes n ON n.id = s.node_id
 		WHERE s.uuid_short = $1`, uuidShort,
-	).Scan(&serverID, &ownerID, &serverUUID, &tokenEncrypted); err != nil {
+	).Scan(&serverID, &ownerID, &serverUUID, &nodeID); err != nil {
 		writeJSON(w, http.StatusOK, sftpAuthResponse{Allowed: false, Reason: "server not found"})
 		return
 	}
 
 	presented := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if tokenEncrypted == nil || presented == "" {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-	expected, err := crypto.Decrypt(h.EncryptionKey, *tokenEncrypted)
-	if err != nil || subtle.ConstantTimeCompare([]byte(presented), []byte(expected)) != 1 {
+	if !daemonauth.VerifyNodeToken(r.Context(), h.DB, h.EncryptionKey, nodeID, presented) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}

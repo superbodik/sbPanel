@@ -19,9 +19,10 @@ export function ScheduleManager({ uuid }: Props) {
     cron_day_of_week: '*',
     cron_day_of_month: '*',
     only_when_online: true,
-    taskType: 'power' as 'power' | 'command',
+    taskType: 'power' as 'power' | 'command' | 'backup',
     action: 'restart',
     command: '',
+    backupName: '',
   });
 
   function refresh() {
@@ -48,7 +49,9 @@ export function ScheduleManager({ uuid }: Props) {
         tasks: [
           form.taskType === 'power'
             ? { action: 'power', payload: form.action, time_offset_seconds: 0 }
-            : { action: 'command', payload: form.command, time_offset_seconds: 0 },
+            : form.taskType === 'command'
+              ? { action: 'command', payload: form.command, time_offset_seconds: 0 }
+              : { action: 'backup', payload: form.backupName, time_offset_seconds: 0 },
         ],
       });
       setShowForm(false);
@@ -115,11 +118,12 @@ export function ScheduleManager({ uuid }: Props) {
                   id="sch-task-type"
                   value={form.taskType}
                   onChange={(e) =>
-                    setForm((f) => ({ ...f, taskType: e.target.value as 'power' | 'command' }))
+                    setForm((f) => ({ ...f, taskType: e.target.value as 'power' | 'command' | 'backup' }))
                   }
                 >
                   <option value="power">Power action</option>
                   <option value="command">Console command</option>
+                  <option value="backup">Backup</option>
                 </select>
               </div>
               {form.taskType === 'power' ? (
@@ -136,7 +140,7 @@ export function ScheduleManager({ uuid }: Props) {
                     <option value="kill">Kill</option>
                   </select>
                 </div>
-              ) : (
+              ) : form.taskType === 'command' ? (
                 <div className="sfield">
                   <label htmlFor="sch-command">Command</label>
                   <input
@@ -145,6 +149,16 @@ export function ScheduleManager({ uuid }: Props) {
                     onChange={(e) => setForm((f) => ({ ...f, command: e.target.value }))}
                     placeholder="say Server restarting soon"
                     required
+                  />
+                </div>
+              ) : (
+                <div className="sfield">
+                  <label htmlFor="sch-backup-name">Backup name (optional)</label>
+                  <input
+                    id="sch-backup-name"
+                    value={form.backupName}
+                    onChange={(e) => setForm((f) => ({ ...f, backupName: e.target.value }))}
+                    placeholder="nightly"
                   />
                 </div>
               )}
@@ -221,7 +235,9 @@ export function ScheduleManager({ uuid }: Props) {
                 {s.tasks[0]
                   ? s.tasks[0].action === 'command'
                     ? `Command: ${s.tasks[0].payload}`
-                    : s.tasks[0].payload
+                    : s.tasks[0].action === 'backup'
+                      ? `Backup${s.tasks[0].payload ? ': ' + s.tasks[0].payload : ' (auto-named)'}`
+                      : s.tasks[0].payload
                   : '—'}
               </span>
               <span>{s.only_when_online ? 'Only when online' : 'Always'}</span>
