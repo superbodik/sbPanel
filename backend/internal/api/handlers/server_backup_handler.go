@@ -121,8 +121,26 @@ func (h *ServerBackupHandler) Create(w http.ResponseWriter, r *http.Request) {
 		req.IgnoredFiles = []string{}
 	}
 
+	ignoredJSON, err := json.Marshal(req.IgnoredFiles)
+	if err != nil {
+		http.Error(w, "invalid ignored_files", http.StatusBadRequest)
+		return
+	}
+
+	tx, err := h.DB.Begin(r.Context())
+	if err != nil {
+		http.Error(w, "failed to start transaction", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	if _, err := tx.Exec(r.Context(), `SELECT id FROM servers WHERE id = $1 FOR UPDATE`, serverID); err != nil {
+		http.Error(w, "failed to lock server record", http.StatusInternalServerError)
+		return
+	}
+
 	var count int
-	if err := h.DB.QueryRow(r.Context(),
+	if err := tx.QueryRow(r.Context(),
 		`SELECT count(*) FROM server_backups WHERE server_id = $1`, serverID,
 	).Scan(&count); err != nil {
 		http.Error(w, "failed to check backup limit", http.StatusInternalServerError)
@@ -133,22 +151,21 @@ func (h *ServerBackupHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ignoredJSON, err := json.Marshal(req.IgnoredFiles)
-	if err != nil {
-		http.Error(w, "invalid ignored_files", http.StatusBadRequest)
-		return
-	}
-
 	backupUUID := uuid.New()
 	var id int64
 	var createdAt time.Time
-	if err := h.DB.QueryRow(r.Context(), `
+	if err := tx.QueryRow(r.Context(), `
 		INSERT INTO server_backups (uuid, server_id, name, ignored_files)
 		VALUES ($1, $2, $3, $4)
 		RETURNING id, created_at`,
 		backupUUID, serverID, req.Name, ignoredJSON,
 	).Scan(&id, &createdAt); err != nil {
 		http.Error(w, "failed to create backup record", http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Commit(r.Context()); err != nil {
+		http.Error(w, "failed to reserve backup slot", http.StatusInternalServerError)
 		return
 	}
 

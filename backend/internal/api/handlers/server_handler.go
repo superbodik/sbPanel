@@ -111,68 +111,6 @@ func (h *ServerHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !claims.IsAdmin {
-		var serverLimit *int
-		if err := h.DB.QueryRow(r.Context(),
-			`SELECT server_limit FROM users WHERE id = $1`, claims.UserID,
-		).Scan(&serverLimit); err != nil {
-			http.Error(w, "failed to check server limit", http.StatusInternalServerError)
-			return
-		}
-		if serverLimit != nil {
-			var count int
-			if err := h.DB.QueryRow(r.Context(),
-				`SELECT count(*) FROM servers WHERE owner_id = $1`, claims.UserID,
-			).Scan(&count); err != nil {
-				http.Error(w, "failed to check server limit", http.StatusInternalServerError)
-				return
-			}
-			if count >= *serverLimit {
-				http.Error(w, "server limit reached for your account", http.StatusForbidden)
-				return
-			}
-		}
-	}
-
-	var nodeMemoryMB, nodeDiskMB int64
-	var memoryOverallocate, diskOverallocate int
-	var isPublic, maintenanceMode bool
-	if err := h.DB.QueryRow(r.Context(),
-		`SELECT memory_mb, memory_overallocate, disk_mb, disk_overallocate, is_public, maintenance_mode
-		 FROM nodes WHERE id = $1`, req.NodeID,
-	).Scan(&nodeMemoryMB, &memoryOverallocate, &nodeDiskMB, &diskOverallocate, &isPublic, &maintenanceMode); err != nil {
-		http.Error(w, "node not found", http.StatusNotFound)
-		return
-	}
-	if maintenanceMode {
-		http.Error(w, "this node is in maintenance mode and cannot accept new servers", http.StatusConflict)
-		return
-	}
-	if !isPublic && !claims.IsAdmin {
-		http.Error(w, "node not available", http.StatusForbidden)
-		return
-	}
-
-	var usedMemoryMB, usedDiskMB int64
-	if err := h.DB.QueryRow(r.Context(),
-		`SELECT COALESCE(SUM(memory_mb), 0), COALESCE(SUM(disk_mb), 0) FROM servers WHERE node_id = $1`, req.NodeID,
-	).Scan(&usedMemoryMB, &usedDiskMB); err != nil {
-		http.Error(w, "failed to check node capacity", http.StatusInternalServerError)
-		return
-	}
-	memoryCapacity := effectiveCapacity(nodeMemoryMB, memoryOverallocate)
-	diskCapacity := effectiveCapacity(nodeDiskMB, diskOverallocate)
-	if usedMemoryMB+req.MemoryMB > memoryCapacity {
-		http.Error(w, fmt.Sprintf("node does not have enough memory: %d MB used + %d MB requested exceeds %d MB capacity",
-			usedMemoryMB, req.MemoryMB, memoryCapacity), http.StatusConflict)
-		return
-	}
-	if usedDiskMB+req.DiskMB > diskCapacity {
-		http.Error(w, fmt.Sprintf("node does not have enough disk: %d MB used + %d MB requested exceeds %d MB capacity",
-			usedDiskMB, req.DiskMB, diskCapacity), http.StatusConflict)
-		return
-	}
-
 	environment := req.Environment
 	if environment == nil {
 		environment = map[string]string{}
@@ -210,6 +148,68 @@ func (h *ServerHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback(ctx)
+
+	var nodeMemoryMB, nodeDiskMB int64
+	var memoryOverallocate, diskOverallocate int
+	var isPublic, maintenanceMode bool
+	if err := tx.QueryRow(ctx,
+		`SELECT memory_mb, memory_overallocate, disk_mb, disk_overallocate, is_public, maintenance_mode
+		 FROM nodes WHERE id = $1 FOR UPDATE`, req.NodeID,
+	).Scan(&nodeMemoryMB, &memoryOverallocate, &nodeDiskMB, &diskOverallocate, &isPublic, &maintenanceMode); err != nil {
+		http.Error(w, "node not found", http.StatusNotFound)
+		return
+	}
+	if maintenanceMode {
+		http.Error(w, "this node is in maintenance mode and cannot accept new servers", http.StatusConflict)
+		return
+	}
+	if !isPublic && !claims.IsAdmin {
+		http.Error(w, "node not available", http.StatusForbidden)
+		return
+	}
+
+	var usedMemoryMB, usedDiskMB int64
+	if err := tx.QueryRow(ctx,
+		`SELECT COALESCE(SUM(memory_mb), 0), COALESCE(SUM(disk_mb), 0) FROM servers WHERE node_id = $1`, req.NodeID,
+	).Scan(&usedMemoryMB, &usedDiskMB); err != nil {
+		http.Error(w, "failed to check node capacity", http.StatusInternalServerError)
+		return
+	}
+	memoryCapacity := effectiveCapacity(nodeMemoryMB, memoryOverallocate)
+	diskCapacity := effectiveCapacity(nodeDiskMB, diskOverallocate)
+	if usedMemoryMB+req.MemoryMB > memoryCapacity {
+		http.Error(w, fmt.Sprintf("node does not have enough memory: %d MB used + %d MB requested exceeds %d MB capacity",
+			usedMemoryMB, req.MemoryMB, memoryCapacity), http.StatusConflict)
+		return
+	}
+	if usedDiskMB+req.DiskMB > diskCapacity {
+		http.Error(w, fmt.Sprintf("node does not have enough disk: %d MB used + %d MB requested exceeds %d MB capacity",
+			usedDiskMB, req.DiskMB, diskCapacity), http.StatusConflict)
+		return
+	}
+
+	if !claims.IsAdmin {
+		var serverLimit *int
+		if err := tx.QueryRow(ctx,
+			`SELECT server_limit FROM users WHERE id = $1 FOR UPDATE`, claims.UserID,
+		).Scan(&serverLimit); err != nil {
+			http.Error(w, "failed to check server limit", http.StatusInternalServerError)
+			return
+		}
+		if serverLimit != nil {
+			var count int
+			if err := tx.QueryRow(ctx,
+				`SELECT count(*) FROM servers WHERE owner_id = $1`, claims.UserID,
+			).Scan(&count); err != nil {
+				http.Error(w, "failed to check server limit", http.StatusInternalServerError)
+				return
+			}
+			if count >= *serverLimit {
+				http.Error(w, "server limit reached for your account", http.StatusForbidden)
+				return
+			}
+		}
+	}
 
 	var serverID int64
 	err = tx.QueryRow(ctx, `

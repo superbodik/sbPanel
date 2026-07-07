@@ -1560,3 +1560,29 @@ actually flow into the create form.
     string as a hint and sets the native `required` attribute when the
     rules include it, so most mistakes get caught before the request
     even goes out, not just after.
+- **Found and fixed two real TOCTOU races in code from this very session**
+  (asked to sweep for bugs/holes before adding more features, so audited
+  the recent additions specifically rather than assuming they were solid
+  just because they'd shipped): both the node-capacity check in
+  `ServerHandler.Create` and the `backup_limit` check in
+  `ServerBackupHandler.Create` read a `count`/`SUM` via a plain
+  `h.DB.QueryRow` *outside* any transaction, then inserted separately —
+  two concurrent requests hitting the same node/server would both read
+  the same pre-insert numbers, both pass the check, and both succeed,
+  together exceeding the limit that was just added. Classic
+  check-then-act race, and a more consequential one for node capacity
+  specifically (double-booking a node's memory could genuinely
+  oversubscribe it, not just a minor quota miscount). Fixed both by
+  moving the check inside a transaction that locks the relevant row
+  (`SELECT ... FOR UPDATE` on the node/server/user row) before reading
+  the count and before inserting — under READ COMMITTED, a second
+  concurrent transaction's `FOR UPDATE` blocks until the first commits,
+  and its subsequent count read then correctly sees the first
+  transaction's now-committed row. For servers, this meant moving the
+  node-capacity, server-limit, and insert all into the same transaction
+  that already spanned the daemon call (extending an existing pattern
+  rather than introducing a new one). For backups, used a short-lived
+  transaction that commits *before* the slow tar/gzip daemon call rather
+  than holding the lock for the whole backup duration, since unlike
+  server creation there was no existing precedent for holding the tx
+  open across the daemon round-trip here.
