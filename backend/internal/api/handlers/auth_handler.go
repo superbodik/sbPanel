@@ -194,3 +194,58 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		"is_admin": claims.IsAdmin,
 	})
 }
+
+type changePasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
+func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	claims, ok := auth.FromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req changePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if len(req.NewPassword) < 8 {
+		http.Error(w, "new password must be at least 8 characters", http.StatusBadRequest)
+		return
+	}
+
+	var passwordHash string
+	if err := h.DB.QueryRow(r.Context(),
+		`SELECT password_hash FROM users WHERE id = $1`, claims.UserID,
+	).Scan(&passwordHash); err != nil {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+	if !auth.VerifyPassword(passwordHash, req.CurrentPassword) {
+		http.Error(w, "current password is incorrect", http.StatusForbidden)
+		return
+	}
+
+	newHash, err := auth.HashPassword(req.NewPassword)
+	if err != nil {
+		http.Error(w, "failed to hash password", http.StatusInternalServerError)
+		return
+	}
+	if _, err := h.DB.Exec(r.Context(),
+		`UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2`, newHash, claims.UserID,
+	); err != nil {
+		http.Error(w, "failed to update password", http.StatusInternalServerError)
+		return
+	}
+
+	activity.Record(r.Context(), h.DB, activity.Entry{
+		ActorUserID: &claims.UserID,
+		Event:       "account.change_password",
+		IPAddress:   activity.RequestIP(r),
+	})
+
+	w.WriteHeader(http.StatusNoContent)
+}

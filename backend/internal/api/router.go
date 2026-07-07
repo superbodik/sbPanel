@@ -99,6 +99,7 @@ func NewRouter(deps Dependencies) http.Handler {
 			r.Use(auth.Middleware(deps.Token, resolveAPIKey(deps.DB)))
 
 			r.Get("/auth/me", authHandler.Me)
+			r.Post("/auth/change-password", authHandler.ChangePassword)
 
 			r.Get("/nodes", nodeHandler.List)
 			r.With(auth.RequireAdmin).Post("/nodes", nodeHandler.Create)
@@ -108,6 +109,7 @@ func NewRouter(deps Dependencies) http.Handler {
 			r.Get("/nodes/{id}/status", nodeHandler.Status)
 
 			r.With(auth.RequireAdmin).Get("/users", userHandler.List)
+			r.With(auth.RequireAdmin).Post("/users", userHandler.Create)
 			r.With(auth.RequireAdmin).Patch("/users/{id}", userHandler.Update)
 
 			r.Get("/database-hosts", databaseHostHandler.List)

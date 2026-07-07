@@ -9,6 +9,7 @@ import type {
   CreateNodeResponse,
   CreateScheduleRequest,
   CreateServerRequest,
+  CreateUserRequest,
   DatabaseHost,
   Egg,
   FileEntry,
@@ -226,8 +227,17 @@ export const api = {
 
   listUsers: () => request<PanelUser[]>('/users'),
 
+  createUser: (payload: CreateUserRequest) =>
+    request<{ id: number }>('/users', { method: 'POST', body: JSON.stringify(payload) }),
+
   updateUser: (id: number, payload: UpdateUserRequest) =>
     request<void>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<void>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    }),
 
   listDatabaseHosts: () => request<DatabaseHost[]>('/database-hosts'),
 

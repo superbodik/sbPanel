@@ -43,6 +43,46 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, users)
 }
 
+type createUserRequest struct {
+	Email       string `json:"email"`
+	Username    string `json:"username"`
+	Password    string `json:"password"`
+	IsAdmin     bool   `json:"is_admin"`
+	ServerLimit *int   `json:"server_limit"`
+}
+
+func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
+	var req createUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.Email == "" || req.Username == "" || len(req.Password) < 8 {
+		http.Error(w, "email, username, and a password of at least 8 characters are required", http.StatusBadRequest)
+		return
+	}
+
+	hash, err := auth.HashPassword(req.Password)
+	if err != nil {
+		http.Error(w, "failed to hash password", http.StatusInternalServerError)
+		return
+	}
+
+	var id int64
+	err = h.DB.QueryRow(r.Context(), `
+		INSERT INTO users (email, username, password_hash, is_admin, is_active, server_limit)
+		VALUES ($1, $2, $3, $4, true, $5)
+		RETURNING id`,
+		req.Email, req.Username, hash, req.IsAdmin, req.ServerLimit,
+	).Scan(&id)
+	if err != nil {
+		http.Error(w, "failed to create user (email or username already in use?)", http.StatusConflict)
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, map[string]any{"id": id})
+}
+
 type updateUserRequest struct {
 	IsAdmin     bool `json:"is_admin"`
 	IsActive    bool `json:"is_active"`

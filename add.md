@@ -1586,3 +1586,29 @@ actually flow into the create form.
   than holding the lock for the whole backup duration, since unlike
   server creation there was no existing precedent for holding the tx
   open across the daemon round-trip here.
+- **Found the biggest gap yet: there was no way to create a non-admin user
+  account anywhere, and no way for anyone to ever change their own
+  password.** Self-registration being disabled was a deliberate,
+  documented choice from early in this project — but that was never
+  supposed to mean admins had no way to add users either. Traced it all
+  the way through: `SubuserHandler.Create` requires the email to already
+  belong to an existing user (`404` otherwise, it never creates one);
+  `UserHandler` only had `List`/`Update`, nothing that inserts a row; and
+  `panel-admin`, the only thing that ever inserts into `users`, hardcodes
+  `is_admin = true` on every account it creates. Net effect: the only
+  accounts that could ever exist were full admins created over SSH — the
+  entire subuser/RBAC/scoped-permission system built out over this
+  session had no way to actually onboard the non-admin users it was
+  designed for. Separately, once an account exists, nothing anywhere
+  (backend or frontend) ever let its owner change its password — an
+  admin-set password was permanent unless someone edited the database
+  directly.
+  - `UserHandler.Create` (admin-only): email/username/password/is_admin/
+    server_limit, bcrypt-hashed the same way `panel-admin` already does.
+  - `AuthHandler.ChangePassword`: verifies the current password with the
+    same `auth.VerifyPassword` login already uses before accepting a new
+    one, logged to the activity feed like every other account action.
+  - Frontend: a "Create user" form on the Users page (admin section) and
+    a "Change password" card on Account, both verified end-to-end in a
+    real browser — confirmed the exact right payload reaches each
+    endpoint and the success/error states render correctly.

@@ -28,6 +28,12 @@ export function Account() {
   const [sshError, setSSHError] = useState<string | null>(null);
   const [sshSubmitting, setSSHSubmitting] = useState(false);
 
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+
   const [twofaStatus, setTwofaStatus] = useState<TwoFAStatus | null>(null);
   const [twofaSetup, setTwofaSetup] = useState<TwoFASetup | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
@@ -106,6 +112,23 @@ export function Account() {
       refreshSSHKeys();
     } catch (err) {
       setSSHError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setChangingPassword(true);
+    setPasswordError(null);
+    setPasswordSuccess(false);
+    try {
+      await api.changePassword(currentPassword, newPassword);
+      setCurrentPassword('');
+      setNewPassword('');
+      setPasswordSuccess(true);
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setChangingPassword(false);
     }
   }
 
@@ -315,6 +338,55 @@ export function Account() {
                 style={{ width: 'auto', padding: '10px 20px' }}
               >
                 {sshSubmitting ? 'Adding…' : 'Add key'}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div className="acc-card">
+          <div className="acc-card-title">Change password</div>
+          <form onSubmit={handleChangePassword}>
+            <div className="sfield" style={{ marginBottom: 14 }}>
+              <label htmlFor="current-password">Current password</label>
+              <input
+                id="current-password"
+                type="password"
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="sfield" style={{ marginBottom: 14 }}>
+              <label htmlFor="new-password">New password</label>
+              <input
+                id="new-password"
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="at least 8 characters"
+                required
+              />
+            </div>
+            {passwordError && (
+              <div className="login-error show" style={{ marginBottom: 12 }}>
+                {passwordError}
+              </div>
+            )}
+            {passwordSuccess && (
+              <p className="srv-desc" style={{ color: 'var(--green)', marginBottom: 12 }}>
+                Password updated.
+              </p>
+            )}
+            <div className="settings-foot">
+              <button
+                className="btn-primary"
+                type="submit"
+                disabled={changingPassword}
+                style={{ width: 'auto', padding: '10px 20px' }}
+              >
+                {changingPassword ? 'Updating…' : 'Update password'}
               </button>
             </div>
           </form>

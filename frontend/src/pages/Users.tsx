@@ -9,6 +9,16 @@ export function Users() {
   const [drafts, setDrafts] = useState<Record<number, { serverLimit: string }>>({});
   const [saving, setSaving] = useState<number | null>(null);
 
+  const [createForm, setCreateForm] = useState({
+    email: '',
+    username: '',
+    password: '',
+    is_admin: false,
+    server_limit: '',
+  });
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
   function refresh() {
     api
       .listUsers()
@@ -82,12 +92,99 @@ export function Users() {
     }
   }
 
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setCreating(true);
+    setCreateError(null);
+    try {
+      await api.createUser({
+        email: createForm.email,
+        username: createForm.username,
+        password: createForm.password,
+        is_admin: createForm.is_admin,
+        server_limit: createForm.server_limit.trim() === '' ? null : Number(createForm.server_limit),
+      });
+      setCreateForm({ email: '', username: '', password: '', is_admin: false, server_limit: '' });
+      refresh();
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setCreating(false);
+    }
+  }
+
   return (
     <div className="view active">
       <div className="dash-head">
         <h1>Users</h1>
         <p>Everyone with a Roost account.</p>
       </div>
+
+      {!forbidden && (
+        <div className="settings-card" style={{ marginBottom: 24 }}>
+          <div className="settings-card-title">Create user</div>
+          <form onSubmit={handleCreate}>
+            <div className="settings-grid">
+              <div className="sfield">
+                <label htmlFor="user-email">Email</label>
+                <input
+                  id="user-email"
+                  type="email"
+                  value={createForm.email}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="sfield">
+                <label htmlFor="user-username">Username</label>
+                <input
+                  id="user-username"
+                  value={createForm.username}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, username: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="sfield">
+                <label htmlFor="user-password">Password</label>
+                <input
+                  id="user-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={createForm.password}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
+                  placeholder="at least 8 characters"
+                  required
+                />
+              </div>
+              <div className="sfield">
+                <label htmlFor="user-limit">Server limit</label>
+                <input
+                  id="user-limit"
+                  type="number"
+                  value={createForm.server_limit}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, server_limit: e.target.value }))}
+                  placeholder="unlimited"
+                />
+              </div>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginBottom: 14 }}>
+              <div
+                className={`toggle-sw ${createForm.is_admin ? 'on' : ''}`}
+                onClick={() => setCreateForm((f) => ({ ...f, is_admin: !f.is_admin }))}
+              >
+                <div className="toggle-knob" />
+              </div>
+              Admin
+            </label>
+            {createError && <div className="login-error show" style={{ marginBottom: 12 }}>{createError}</div>}
+            <div className="settings-foot">
+              <button className="btn-primary" type="submit" disabled={creating} style={{ width: 'auto', padding: '10px 20px' }}>
+                {creating ? 'Creating…' : 'Create user'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {forbidden && <p className="srv-desc">Only admins can manage users.</p>}
 

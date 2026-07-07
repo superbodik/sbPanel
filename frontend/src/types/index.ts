@@ -339,3 +339,11 @@ export interface UpdateUserRequest {
   is_active: boolean;
   server_limit: number | null;
 }
+
+export interface CreateUserRequest {
+  email: string;
+  username: string;
+  password: string;
+  is_admin: boolean;
+  server_limit: number | null;
+}
