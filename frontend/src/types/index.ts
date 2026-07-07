@@ -63,7 +63,10 @@ export interface Node {
   scheme: string;
   daemon_port: number;
   memory_mb: number;
+  memory_overallocate: number;
   disk_mb: number;
+  disk_overallocate: number;
+  is_public: boolean;
   maintenance_mode: boolean;
   last_seen_at: string | null;
 }
@@ -80,7 +83,23 @@ export interface CreateNodeRequest {
   scheme?: string;
   daemon_port?: number;
   memory_mb: number;
+  memory_overallocate?: number;
   disk_mb: number;
+  disk_overallocate?: number;
+  is_public?: boolean;
+}
+
+export interface UpdateNodeRequest {
+  name: string;
+  fqdn: string;
+  scheme: string;
+  daemon_port: number;
+  memory_mb: number;
+  memory_overallocate: number;
+  disk_mb: number;
+  disk_overallocate: number;
+  is_public: boolean;
+  maintenance_mode: boolean;
 }
 
 export interface CreateNodeResponse {

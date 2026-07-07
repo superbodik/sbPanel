@@ -132,6 +132,45 @@ func (h *ServerHandler) Create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var nodeMemoryMB, nodeDiskMB int64
+	var memoryOverallocate, diskOverallocate int
+	var isPublic, maintenanceMode bool
+	if err := h.DB.QueryRow(r.Context(),
+		`SELECT memory_mb, memory_overallocate, disk_mb, disk_overallocate, is_public, maintenance_mode
+		 FROM nodes WHERE id = $1`, req.NodeID,
+	).Scan(&nodeMemoryMB, &memoryOverallocate, &nodeDiskMB, &diskOverallocate, &isPublic, &maintenanceMode); err != nil {
+		http.Error(w, "node not found", http.StatusNotFound)
+		return
+	}
+	if maintenanceMode {
+		http.Error(w, "this node is in maintenance mode and cannot accept new servers", http.StatusConflict)
+		return
+	}
+	if !isPublic && !claims.IsAdmin {
+		http.Error(w, "node not available", http.StatusForbidden)
+		return
+	}
+
+	var usedMemoryMB, usedDiskMB int64
+	if err := h.DB.QueryRow(r.Context(),
+		`SELECT COALESCE(SUM(memory_mb), 0), COALESCE(SUM(disk_mb), 0) FROM servers WHERE node_id = $1`, req.NodeID,
+	).Scan(&usedMemoryMB, &usedDiskMB); err != nil {
+		http.Error(w, "failed to check node capacity", http.StatusInternalServerError)
+		return
+	}
+	memoryCapacity := effectiveCapacity(nodeMemoryMB, memoryOverallocate)
+	diskCapacity := effectiveCapacity(nodeDiskMB, diskOverallocate)
+	if usedMemoryMB+req.MemoryMB > memoryCapacity {
+		http.Error(w, fmt.Sprintf("node does not have enough memory: %d MB used + %d MB requested exceeds %d MB capacity",
+			usedMemoryMB, req.MemoryMB, memoryCapacity), http.StatusConflict)
+		return
+	}
+	if usedDiskMB+req.DiskMB > diskCapacity {
+		http.Error(w, fmt.Sprintf("node does not have enough disk: %d MB used + %d MB requested exceeds %d MB capacity",
+			usedDiskMB, req.DiskMB, diskCapacity), http.StatusConflict)
+		return
+	}
+
 	client, err := h.NodeClient(req.NodeID)
 	if err != nil {
 		log.Printf("servers.create: node %d client unavailable: %v", req.NodeID, err)
@@ -474,4 +513,8 @@ func (h *ServerHandler) setSuspended(w http.ResponseWriter, r *http.Request, sus
 	})
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func effectiveCapacity(totalMB int64, overallocatePercent int) int64 {
+	return totalMB * int64(100+overallocatePercent) / 100
 }

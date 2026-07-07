@@ -23,13 +23,16 @@ type NodeHandler struct {
 }
 
 type createNodeRequest struct {
-	Name       string `json:"name"`
-	LocationID int    `json:"location_id"`
-	FQDN       string `json:"fqdn"`
-	Scheme     string `json:"scheme"`
-	DaemonPort int    `json:"daemon_port"`
-	MemoryMB   int64  `json:"memory_mb"`
-	DiskMB     int64  `json:"disk_mb"`
+	Name               string `json:"name"`
+	LocationID         int    `json:"location_id"`
+	FQDN               string `json:"fqdn"`
+	Scheme             string `json:"scheme"`
+	DaemonPort         int    `json:"daemon_port"`
+	MemoryMB           int64  `json:"memory_mb"`
+	MemoryOverallocate int    `json:"memory_overallocate"`
+	DiskMB             int64  `json:"disk_mb"`
+	DiskOverallocate   int    `json:"disk_overallocate"`
+	IsPublic           *bool  `json:"is_public"`
 }
 
 type createNodeResponse struct {
@@ -48,6 +51,10 @@ func (h *NodeHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.DaemonPort == 0 {
 		req.DaemonPort = 8443
+	}
+	isPublic := true
+	if req.IsPublic != nil {
+		isPublic = *req.IsPublic
 	}
 
 	rawToken, err := generateToken(32)
@@ -69,11 +76,13 @@ func (h *NodeHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var id int64
 	err = h.DB.QueryRow(r.Context(), `
 		INSERT INTO nodes (name, location_id, fqdn, scheme, daemon_port,
-		                    daemon_token_hash, daemon_token_encrypted, memory_mb, disk_mb)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		                    daemon_token_hash, daemon_token_encrypted, memory_mb, memory_overallocate,
+		                    disk_mb, disk_overallocate, is_public)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING id`,
 		req.Name, req.LocationID, req.FQDN, req.Scheme, req.DaemonPort,
-		tokenHash, tokenEncrypted, req.MemoryMB, req.DiskMB,
+		tokenHash, tokenEncrypted, req.MemoryMB, req.MemoryOverallocate,
+		req.DiskMB, req.DiskOverallocate, isPublic,
 	).Scan(&id)
 	if err != nil {
 		http.Error(w, "failed to create node", http.StatusInternalServerError)
@@ -94,10 +103,22 @@ func (h *NodeHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *NodeHandler) List(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.DB.Query(r.Context(), `
-		SELECT id, name, fqdn, scheme, daemon_port, memory_mb, disk_mb,
-		       maintenance_mode, last_seen_at
-		FROM nodes ORDER BY name`)
+	claims, ok := auth.FromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	query := `
+		SELECT id, name, fqdn, scheme, daemon_port, memory_mb, memory_overallocate,
+		       disk_mb, disk_overallocate, is_public, maintenance_mode, last_seen_at
+		FROM nodes`
+	if !claims.IsAdmin {
+		query += ` WHERE is_public = true`
+	}
+	query += ` ORDER BY name`
+
+	rows, err := h.DB.Query(r.Context(), query)
 	if err != nil {
 		http.Error(w, "failed to list nodes", http.StatusInternalServerError)
 		return
@@ -105,22 +126,26 @@ func (h *NodeHandler) List(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	type nodeSummary struct {
-		ID              int64   `json:"id"`
-		Name            string  `json:"name"`
-		FQDN            string  `json:"fqdn"`
-		Scheme          string  `json:"scheme"`
-		DaemonPort      int     `json:"daemon_port"`
-		MemoryMB        int64   `json:"memory_mb"`
-		DiskMB          int64   `json:"disk_mb"`
-		MaintenanceMode bool    `json:"maintenance_mode"`
-		LastSeenAt      *string `json:"last_seen_at"`
+		ID                 int64   `json:"id"`
+		Name               string  `json:"name"`
+		FQDN               string  `json:"fqdn"`
+		Scheme             string  `json:"scheme"`
+		DaemonPort         int     `json:"daemon_port"`
+		MemoryMB           int64   `json:"memory_mb"`
+		MemoryOverallocate int     `json:"memory_overallocate"`
+		DiskMB             int64   `json:"disk_mb"`
+		DiskOverallocate   int     `json:"disk_overallocate"`
+		IsPublic           bool    `json:"is_public"`
+		MaintenanceMode    bool    `json:"maintenance_mode"`
+		LastSeenAt         *string `json:"last_seen_at"`
 	}
 
 	nodes := make([]nodeSummary, 0)
 	for rows.Next() {
 		var n nodeSummary
 		if err := rows.Scan(&n.ID, &n.Name, &n.FQDN, &n.Scheme, &n.DaemonPort,
-			&n.MemoryMB, &n.DiskMB, &n.MaintenanceMode, &n.LastSeenAt); err != nil {
+			&n.MemoryMB, &n.MemoryOverallocate, &n.DiskMB, &n.DiskOverallocate,
+			&n.IsPublic, &n.MaintenanceMode, &n.LastSeenAt); err != nil {
 			http.Error(w, "failed to read nodes", http.StatusInternalServerError)
 			return
 		}
@@ -131,12 +156,16 @@ func (h *NodeHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateNodeRequest struct {
-	Name       string `json:"name"`
-	FQDN       string `json:"fqdn"`
-	Scheme     string `json:"scheme"`
-	DaemonPort int    `json:"daemon_port"`
-	MemoryMB   int64  `json:"memory_mb"`
-	DiskMB     int64  `json:"disk_mb"`
+	Name               string `json:"name"`
+	FQDN               string `json:"fqdn"`
+	Scheme             string `json:"scheme"`
+	DaemonPort         int    `json:"daemon_port"`
+	MemoryMB           int64  `json:"memory_mb"`
+	MemoryOverallocate int    `json:"memory_overallocate"`
+	DiskMB             int64  `json:"disk_mb"`
+	DiskOverallocate   int    `json:"disk_overallocate"`
+	IsPublic           bool   `json:"is_public"`
+	MaintenanceMode    bool   `json:"maintenance_mode"`
 }
 
 func (h *NodeHandler) Update(w http.ResponseWriter, r *http.Request) {
@@ -158,9 +187,11 @@ func (h *NodeHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	tag, err := h.DB.Exec(r.Context(), `
 		UPDATE nodes SET name = $1, fqdn = $2, scheme = $3, daemon_port = $4,
-		                 memory_mb = $5, disk_mb = $6
-		WHERE id = $7`,
-		req.Name, req.FQDN, req.Scheme, req.DaemonPort, req.MemoryMB, req.DiskMB, id,
+		                 memory_mb = $5, memory_overallocate = $6, disk_mb = $7,
+		                 disk_overallocate = $8, is_public = $9, maintenance_mode = $10
+		WHERE id = $11`,
+		req.Name, req.FQDN, req.Scheme, req.DaemonPort, req.MemoryMB, req.MemoryOverallocate,
+		req.DiskMB, req.DiskOverallocate, req.IsPublic, req.MaintenanceMode, id,
 	)
 	if err != nil {
 		http.Error(w, "failed to update node", http.StatusInternalServerError)

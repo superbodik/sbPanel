@@ -79,7 +79,11 @@ export function Nodes() {
     scheme: 'http',
     daemon_port: 8443,
     memory_mb: 0,
+    memory_overallocate: 0,
     disk_mb: 0,
+    disk_overallocate: 0,
+    is_public: true,
+    maintenance_mode: false,
   });
   const [savingNodeId, setSavingNodeId] = useState<number | null>(null);
   const [regeneratingNodeId, setRegeneratingNodeId] = useState<number | null>(null);
@@ -98,7 +102,11 @@ export function Nodes() {
       scheme: node.scheme,
       daemon_port: node.daemon_port,
       memory_mb: node.memory_mb,
+      memory_overallocate: node.memory_overallocate,
       disk_mb: node.disk_mb,
+      disk_overallocate: node.disk_overallocate,
+      is_public: node.is_public,
+      maintenance_mode: node.maintenance_mode,
     });
   }
 
@@ -121,7 +129,7 @@ export function Nodes() {
     setSavingNodeId(node.id);
     setError(null);
     try {
-      await api.updateNode(node.id, { ...editForm, location_id: 1 });
+      await api.updateNode(node.id, editForm);
       setExpandedNodeId(null);
       refresh();
     } catch (err) {
@@ -376,10 +384,20 @@ export function Nodes() {
                 <div className="db-row">
                   <span
                     className="db-name"
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
                     onClick={() => toggleExpand(node)}
                   >
                     {node.name}
+                    {!node.is_public && (
+                      <span className="srv-desc" style={{ fontSize: 10, border: '1px solid var(--border)', borderRadius: 4, padding: '1px 5px' }}>
+                        Private
+                      </span>
+                    )}
+                    {node.maintenance_mode && (
+                      <span style={{ fontSize: 10, color: 'var(--yellow, #f0b232)', border: '1px solid var(--border)', borderRadius: 4, padding: '1px 5px' }}>
+                        Maintenance
+                      </span>
+                    )}
                   </span>
                   <span className="db-pw">
                     {node.scheme}://{node.fqdn}:{node.daemon_port}
@@ -466,6 +484,17 @@ export function Nodes() {
                         />
                       </div>
                       <div className="sfield">
+                        <label htmlFor={`edit-memory-overallocate-${node.id}`}>Memory overallocate (%)</label>
+                        <input
+                          id={`edit-memory-overallocate-${node.id}`}
+                          type="number"
+                          value={editForm.memory_overallocate}
+                          onChange={(e) =>
+                            setEditForm((f) => ({ ...f, memory_overallocate: Number(e.target.value) }))
+                          }
+                        />
+                      </div>
+                      <div className="sfield">
                         <label htmlFor={`edit-disk-${node.id}`}>Disk (MB)</label>
                         <input
                           id={`edit-disk-${node.id}`}
@@ -476,6 +505,37 @@ export function Nodes() {
                           }
                         />
                       </div>
+                      <div className="sfield">
+                        <label htmlFor={`edit-disk-overallocate-${node.id}`}>Disk overallocate (%)</label>
+                        <input
+                          id={`edit-disk-overallocate-${node.id}`}
+                          type="number"
+                          value={editForm.disk_overallocate}
+                          onChange={(e) =>
+                            setEditForm((f) => ({ ...f, disk_overallocate: Number(e.target.value) }))
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 20, marginBottom: 14 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                        <div
+                          className={`toggle-sw ${editForm.is_public ? 'on' : ''}`}
+                          onClick={() => setEditForm((f) => ({ ...f, is_public: !f.is_public }))}
+                        >
+                          <div className="toggle-knob" />
+                        </div>
+                        Public (visible to all users when creating a server)
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                        <div
+                          className={`toggle-sw ${editForm.maintenance_mode ? 'on' : ''}`}
+                          onClick={() => setEditForm((f) => ({ ...f, maintenance_mode: !f.maintenance_mode }))}
+                        >
+                          <div className="toggle-knob" />
+                        </div>
+                        Maintenance mode (blocks new servers)
+                      </label>
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       <button

@@ -26,6 +26,7 @@ import type {
   TwoFASetup,
   TwoFAStatus,
   UpdateCheck,
+  UpdateNodeRequest,
   UpdateUserRequest,
   VersionInfo,
 } from '../types';
@@ -213,7 +214,7 @@ export const api = {
   createNode: (payload: CreateNodeRequest) =>
     request<CreateNodeResponse>('/nodes', { method: 'POST', body: JSON.stringify(payload) }),
 
-  updateNode: (id: number, payload: CreateNodeRequest) =>
+  updateNode: (id: number, payload: UpdateNodeRequest) =>
     request<void>(`/nodes/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
 
   deleteNode: (id: number) => request<void>(`/nodes/${id}`, { method: 'DELETE' }),

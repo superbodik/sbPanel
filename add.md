@@ -1496,3 +1496,37 @@ actually flow into the create form.
   and server suspension (is_suspended + the 'suspended' status). Plus two
   real bug fixes since v0.2.0: the domains-creation timeout chain, and
   "+ Folder" silently doing nothing on mobile/webview browsers.
+- Implemented node capacity and visibility enforcement — `nodes.is_public`,
+  `maintenance_mode`, `memory_overallocate`, and `disk_overallocate` were
+  all real columns in the schema since the first migration (the last two
+  explicitly documented in `docs/DATABASE.md` as "letting an admin
+  deliberately sell more resources than physically exist"), but the panel
+  never let anyone set `is_public`/`maintenance_mode` (no field in the
+  update request at all), never filtered node visibility by it, and never
+  once checked capacity against any of these numbers when placing a
+  server — you could create as many servers as you wanted on a node
+  requesting far more memory/disk than it had, with zero admission
+  control. `models.Node` itself turned out to be entirely orphaned code
+  (never instantiated anywhere — `node_handler.go` has always used its
+  own private `nodeSummary` struct instead), which is presumably how this
+  drifted so far without anyone noticing.
+  - `NodeHandler.List` now filters to `is_public = true` for non-admins
+    (the same endpoint doubles as the admin management view and the
+    node-picker regular users see in the create-server form, so this one
+    filter covers both call sites for free) and returns the overallocation/
+    visibility fields; `Create`/`Update` now accept and persist all of
+    them.
+  - `ServerHandler.Create` now rejects placing a server on a node that's
+    in maintenance mode, rejects a private node for non-admins, and
+    checks actual memory/disk capacity — `used + requested <= total *
+    (100 + overallocate%) / 100` — before ever calling the daemon. The
+    capacity arithmetic is pulled out into a small `effectiveCapacity`
+    helper with real table-driven tests (including the overallocation
+    percentage actually changing the result, and a used+requested pair
+    right on either side of the boundary) rather than trusting inline
+    integer division in an HTTP handler untested.
+  - Frontend: the Nodes page's edit panel gained overallocation inputs and
+    Public/Maintenance toggles, and the node list shows "Private"/
+    "Maintenance" badges inline so this state is visible without expanding
+    every row. Verified in a real browser that toggling and saving sends
+    the full updated payload to the API.
