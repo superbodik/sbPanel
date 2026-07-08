@@ -22,7 +22,7 @@ func maxBodySize(limit int64) func(http.Handler) http.Handler {
 	}
 }
 
-func NewRouter(dockerManager *docker.Manager, consoleHub *console.Hub, daemonToken, backupDir string) http.Handler {
+func NewRouter(dockerManager *docker.Manager, consoleHub *console.Hub, daemonToken, backupDir, version string) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Logger)
@@ -31,7 +31,7 @@ func NewRouter(dockerManager *docker.Manager, consoleHub *console.Hub, daemonTok
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok"}`))
+		w.Write([]byte(`{"status":"ok","version":"` + version + `"}`))
 	})
 
 	r.Group(func(r chi.Router) {

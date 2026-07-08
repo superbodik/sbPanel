@@ -73,6 +73,11 @@ export function Nodes() {
   const [statuses, setStatuses] = useState<Record<number, NodeStatus | 'checking'>>({});
   const [expandedNodeId, setExpandedNodeId] = useState<number | null>(null);
   const [deletingNodeId, setDeletingNodeId] = useState<number | null>(null);
+  const [panelVersion, setPanelVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.getVersion().then((v) => setPanelVersion(v.version)).catch(() => {});
+  }, []);
   const [editForm, setEditForm] = useState({
     name: '',
     fqdn: '',
@@ -408,18 +413,29 @@ export function Nodes() {
                       'Checking…'
                     ) : status ? (
                       <span
-                        title={status.error ?? ''}
+                        title={
+                          status.error ??
+                          (status.agent_version && panelVersion && status.agent_version !== panelVersion
+                            ? `Node is on v${status.agent_version}, panel is on v${panelVersion} — update this node`
+                            : '')
+                        }
                         style={{
-                          color: status.online ? 'var(--pink-b)' : '#f23f43',
+                          color: !status.online
+                            ? '#f23f43'
+                            : status.agent_version && panelVersion && status.agent_version !== panelVersion
+                              ? 'var(--yellow, #f0b232)'
+                              : 'var(--pink-b)',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {status.online ? 'Online' : `Unreachable: ${status.error ?? 'unknown error'}`}
+                        {status.online
+                          ? `Online${status.agent_version ?? node.agent_version ? ` · v${status.agent_version ?? node.agent_version}` : ''}`
+                          : `Unreachable: ${status.error ?? 'unknown error'}`}
                       </span>
                     ) : (
-                      'Unknown'
+                      node.agent_version ? `Last seen: v${node.agent_version}` : 'Unknown'
                     )}
                     <button
                       className="file-act-btn"

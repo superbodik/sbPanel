@@ -11,10 +11,13 @@ build_daemon_binary() {
 
 	mkdir -p "$DAEMON_INSTALL_DIR" "$DAEMON_DATA_DIR"
 
+	local version
+	version=$(cat "${PROJECT_ROOT}/VERSION" 2>/dev/null || echo "0.0.0-dev")
+
 	log_step "Building daemon"
-	(cd "${PROJECT_ROOT}/daemon" && go build -o "${DAEMON_INSTALL_DIR}/wingsd" ./cmd/wingsd) \
+	(cd "${PROJECT_ROOT}/daemon" && go build -ldflags "-X main.version=${version}" -o "${DAEMON_INSTALL_DIR}/wingsd" ./cmd/wingsd) \
 		|| die "Daemon build failed"
-	log_ok "Daemon binary: ${DAEMON_INSTALL_DIR}/wingsd"
+	log_ok "Daemon binary: ${DAEMON_INSTALL_DIR}/wingsd (v${version})"
 }
 
 install_daemon() {

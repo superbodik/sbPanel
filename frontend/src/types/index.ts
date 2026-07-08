@@ -69,11 +69,13 @@ export interface Node {
   is_public: boolean;
   maintenance_mode: boolean;
   last_seen_at: string | null;
+  agent_version: string | null;
 }
 
 export interface NodeStatus {
   online: boolean;
   error?: string;
+  agent_version?: string;
 }
 
 export interface CreateNodeRequest {

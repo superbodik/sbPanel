@@ -15,6 +15,8 @@ import (
 	"github.com/yourorg/panel-daemon/internal/sftpd"
 )
 
+var version = "0.0.0-dev"
+
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -43,7 +45,7 @@ func main() {
 		}
 	}()
 
-	router := api.NewRouter(dockerManager, consoleHub, cfg.DaemonToken, cfg.BackupDir)
+	router := api.NewRouter(dockerManager, consoleHub, cfg.DaemonToken, cfg.BackupDir, version)
 
 	srv := &http.Server{
 		Addr:    cfg.HTTPAddr,
