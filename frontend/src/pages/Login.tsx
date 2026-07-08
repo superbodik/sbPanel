@@ -42,8 +42,8 @@ export function Login({ onLoggedIn }: Props) {
       <div className="login-box">
         <div className="login-logo">
           <div className="login-logo-text">
-            <div className="title">Roost</div>
-            <div className="sub">Panel</div>
+            <div className="title">Power</div>
+            <div className="sub">Node</div>
           </div>
         </div>
 
@@ -51,7 +51,7 @@ export function Login({ onLoggedIn }: Props) {
           <div className="login-step" key="credentials">
             <div className="login-head">
               <h1>Sign in</h1>
-              <p>Use your Roost account to continue.</p>
+              <p>Use your PowerNode account to continue.</p>
             </div>
 
             <form onSubmit={handleSubmit}>

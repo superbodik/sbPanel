@@ -67,7 +67,7 @@
   }
 
   var termEl = document.getElementById('termType');
-  var termLine = 'bash <(curl -sSL raw.githubusercontent.com/superbodik/Roost/main/install.sh)';
+  var termLine = 'bash <(curl -sSL raw.githubusercontent.com/superbodik/PowerNode/main/install.sh)';
   if (termEl) {
     if (reduceMotion) {
       termEl.textContent = termLine;

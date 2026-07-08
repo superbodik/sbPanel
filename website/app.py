@@ -15,7 +15,7 @@ class Handler(SimpleHTTPRequestHandler):
 def main():
     port = int(os.environ.get("PORT", "8000"))
     server = ThreadingHTTPServer(("0.0.0.0", port), Handler)
-    print(f"Roost landing page serving {PUBLIC_DIR} on 0.0.0.0:{port}")
+    print(f"PowerNode landing page serving {PUBLIC_DIR} on 0.0.0.0:{port}")
     server.serve_forever()
 
 

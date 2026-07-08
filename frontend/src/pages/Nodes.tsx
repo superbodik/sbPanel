@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { Allocation, CreateNodeResponse, DatabaseHost, Node, NodeStatus } from '../types';
 
-const INSTALL_SCRIPT_URL = 'https://raw.githubusercontent.com/superbodik/Roost/main/install.sh';
+const INSTALL_SCRIPT_URL = 'https://raw.githubusercontent.com/superbodik/PowerNode/main/install.sh';
 
 function nodeInstallCommand(daemonToken: string): string {
   return `WINGSD_DAEMON_TOKEN=${daemonToken} WINGSD_PANEL_URL=${window.location.origin} bash <(curl -sSL ${INSTALL_SCRIPT_URL})`;

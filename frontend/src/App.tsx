@@ -64,8 +64,8 @@ export function App() {
           ☰
         </button>
         <div className="topbar-logo">
-          <span className="name">Roost</span>
-          <span className="tag">Panel</span>
+          <span className="name">Power</span>
+          <span className="tag">Node</span>
         </div>
         <div className="topbar-sep" />
         <nav className="breadcrumb">

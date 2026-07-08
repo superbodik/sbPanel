@@ -73,7 +73,7 @@ func (h *TwoFAHandler) Setup(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	secret, otpauthURL, err := auth.GenerateTOTPSecret("Roost", claims.Email)
+	secret, otpauthURL, err := auth.GenerateTOTPSecret("PowerNode", claims.Email)
 	if err != nil {
 		http.Error(w, "failed to generate secret", http.StatusInternalServerError)
 		return

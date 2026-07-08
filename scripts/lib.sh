@@ -12,7 +12,7 @@ log_warn() { printf "${COLOR_YELLOW}[ WARN ]${COLOR_RESET} %s\n" "$1" >&2; }
 log_step() { printf "\n${COLOR_YELLOW}==>${COLOR_RESET} %s\n" "$1" >&2; }
 
 print_banner() {
-	printf "\n${COLOR_YELLOW}Roost${COLOR_RESET} — self-hosted game server panel\n\n" >&2
+	printf "\n${COLOR_YELLOW}PowerNode${COLOR_RESET} — self-hosted game server panel\n\n" >&2
 }
 
 die() {

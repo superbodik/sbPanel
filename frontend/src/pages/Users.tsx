@@ -144,7 +144,7 @@ export function Users() {
     <div className="view active">
       <div className="dash-head">
         <h1>Users</h1>
-        <p>Everyone with a Roost account.</p>
+        <p>Everyone with a PowerNode account.</p>
       </div>
 
       {!forbidden && (

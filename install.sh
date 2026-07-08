@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-REPO_URL="${PANEL_REPO_URL:-https://github.com/superbodik/Roost.git}"
+REPO_URL="${PANEL_REPO_URL:-https://github.com/superbodik/PowerNode.git}"
 REPO_BRANCH="${PANEL_REPO_BRANCH:-main}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

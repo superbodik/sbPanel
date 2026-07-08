@@ -1712,3 +1712,33 @@ actually flow into the create form.
     `daemon/internal/api/router.go`) and moved gRPC to an explicit
     "not implemented, roadmap" section explaining why the `.proto` file is
     still there.
+- **Second full rebrand: Roost → PowerNode**, domain `powernode.pp.ua`,
+  GitHub repo `superbodik/PowerNode`. Same philosophy as the sbPanel→Roost
+  rename: swapped every user-facing brand string and hardcoded repo-slug
+  reference, left non-user-facing plumbing alone (Go module path
+  `github.com/yourorg/panel`, systemd unit names `panel.service`/
+  `wingsd.service`, `PANEL_*`/`WINGSD_*` env var prefixes, npm package
+  name) since none of it contains the old brand name and changing it would
+  break every existing install's env files/service units for no user-visible
+  benefit. Concretely: `config.go`'s default `PANEL_UPDATE_REPO`, the TOTP
+  issuer string, `install.sh`'s default clone URL, the installer banner/menu
+  title strings, the two-part topbar/login logo (split as "Power"/"Node"
+  instead of repeating "PowerNode Panel"), `docs`/`README.md`/`website/`
+  brand text and every hardcoded `superbodik/Roost` install-command link.
+  Picked ⚡ as the new brand-mark emoji (favicon on both the panel frontend,
+  which never had one before, and the marketing site, replacing 🐦) — kept
+  it as an inline SVG data URI, no new asset files. One deliberate
+  behavior change worth flagging: the daemon's nginx config naming for the
+  custom-domains feature changed from `roost-<domain>.conf` to
+  `powernode-<domain>.conf` (`daemon/internal/proxy/proxy.go`) — any node
+  that already has domains configured from before this rebrand will have
+  orphaned `roost-*.conf` files that `RemoveDomain` won't find anymore by
+  the new naming pattern; harmless (nginx just ignores unlisted-but-present
+  configs) but worth a manual cleanup pass on any node updated mid-flight.
+  Did NOT rename the GitHub repository itself — no `gh` CLI available in
+  this environment and no API token to do it via raw REST, so that step
+  needs to happen manually via GitHub's repo settings (Settings → General →
+  repository name) before the new `superbodik/PowerNode` links in
+  README/install.sh/website resolve instead of 404ing (GitHub does
+  auto-redirect the old URL once the rename happens, so existing installs
+  won't break either way).

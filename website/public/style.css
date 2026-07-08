@@ -252,7 +252,7 @@ th, td { padding: 14px 18px; text-align: center; font-size: 13px; border-bottom:
 th { font-weight: 500; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; background: var(--surface); }
 td:first-child, th:first-child { text-align: left; color: var(--text); }
 tbody tr:last-child td { border-bottom: none; }
-.col-roost { color: var(--pink-b); position: relative; }
+.col-powernode { color: var(--pink-b); position: relative; }
 td.yes { color: var(--green); font-weight: 500; }
 td.no { color: var(--red); }
 td.maybe { color: var(--yellow); font-size: 12px; }

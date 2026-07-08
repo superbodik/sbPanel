@@ -3,9 +3,14 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Roost — the game server panel that doesn't get in your way</title>
-<meta name="description" content="Roost: self-hosted, multi-node game server control panel. Full RBAC, 2FA everywhere, live reconnecting console, modular Eggs, database provisioning. Open source, yours forever." />
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐦</text></svg>" />
+<title>PowerNode — the game server panel that doesn't get in your way</title>
+<meta name="description" content="PowerNode: self-hosted, multi-node game server control panel. Full RBAC, 2FA everywhere, live reconnecting console, modular Eggs, database provisioning. Open source, yours forever." />
+<link rel="canonical" href="https://powernode.pp.ua" />
+<meta property="og:title" content="PowerNode — the game server panel that doesn't get in your way" />
+<meta property="og:description" content="Self-hosted, multi-node game server control panel. Full RBAC, 2FA everywhere, live reconnecting console, modular Eggs, database provisioning." />
+<meta property="og:url" content="https://powernode.pp.ua" />
+<meta property="og:type" content="website" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -19,8 +24,8 @@
 <nav class="nav" id="nav">
   <div class="nav-inner">
     <a class="brand" href="#top">
-      <span class="brand-mark">🐦</span>
-      <span class="brand-text">Roost</span>
+      <span class="brand-mark">⚡</span>
+      <span class="brand-text">PowerNode</span>
     </a>
     <div class="nav-links">
       <a href="#features">Features</a>
@@ -28,7 +33,7 @@
       <a href="#eggs">Deploy anything</a>
       <a href="#deploy">Install</a>
     </div>
-    <a class="btn-ghost" href="https://github.com/superbodik/Roost" target="_blank" rel="noopener">
+    <a class="btn-ghost" href="https://github.com/superbodik/PowerNode" target="_blank" rel="noopener">
       <span>GitHub</span>
       <span class="star">★</span>
     </a>
@@ -45,14 +50,14 @@
       <span class="grad grad-3">Zero compromise.</span>
     </h1>
     <p class="hero-sub reveal">
-      Roost is a self-hosted, multi-node control panel for game servers, bots and generic
+      PowerNode is a self-hosted, multi-node control panel for game servers, bots and generic
       apps — built from scratch to fix everything the old-guard panels shrug off:
       real RBAC, 2FA on every login, a console that actually reconnects, and a deploy
       story that fits in one line of bash.
     </p>
     <div class="hero-cta reveal">
-      <a class="btn-primary" href="#deploy">Deploy Roost now</a>
-      <a class="btn-secondary" href="https://github.com/superbodik/Roost" target="_blank" rel="noopener">Read the source</a>
+      <a class="btn-primary" href="#deploy">Deploy PowerNode now</a>
+      <a class="btn-secondary" href="https://github.com/superbodik/PowerNode" target="_blank" rel="noopener">Read the source</a>
     </div>
 
     <div class="hero-term reveal">
@@ -156,7 +161,7 @@
   </section>
 
   <section class="compare" id="compare">
-    <h2 class="section-title reveal">How Roost stacks up</h2>
+    <h2 class="section-title reveal">How PowerNode stacks up</h2>
     <p class="section-sub reveal">Same job as the legacy panels. None of the baggage.</p>
 
     <div class="table-wrap reveal">
@@ -164,7 +169,7 @@
         <thead>
           <tr>
             <th>Feature</th>
-            <th class="col-roost">Roost</th>
+            <th class="col-powernode">PowerNode</th>
             <th>Old-guard panels</th>
             <th>Managed / SaaS hosts</th>
           </tr>
@@ -234,7 +239,7 @@
       <div class="egg-card reveal"><span class="egg-emoji">🐳</span><span>Any Docker image</span></div>
       <div class="egg-card reveal"><span class="egg-emoji">🛠️</span><span>Whatever's next</span></div>
     </div>
-    <p class="egg-note reveal">This page is literally hosted on Roost, via the stock "Python: Website" egg. No special-casing.</p>
+    <p class="egg-note reveal">This page is literally hosted on PowerNode, via the stock "Python: Website" egg. No special-casing.</p>
   </section>
 
   <section class="deploy" id="deploy">
@@ -247,23 +252,23 @@
         <span class="code-label">install.sh</span>
         <button class="copy-btn" id="copyInstall">Copy</button>
       </div>
-      <pre id="installCmd">bash &lt;(curl -sSL https://raw.githubusercontent.com/superbodik/Roost/main/install.sh)</pre>
+      <pre id="installCmd">bash &lt;(curl -sSL https://raw.githubusercontent.com/superbodik/PowerNode/main/install.sh)</pre>
     </div>
 
-    <p class="section-sub reveal" style="margin-top:28px;">Already running Roost? Same command, one flag:</p>
+    <p class="section-sub reveal" style="margin-top:28px;">Already running PowerNode? Same command, one flag:</p>
     <div class="code-block reveal">
       <div class="code-bar">
         <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
         <span class="code-label">update</span>
         <button class="copy-btn" id="copyUpdate">Copy</button>
       </div>
-      <pre id="updateCmd">PANEL_UPDATE=1 bash &lt;(curl -sSL https://raw.githubusercontent.com/superbodik/Roost/main/install.sh)</pre>
+      <pre id="updateCmd">PANEL_UPDATE=1 bash &lt;(curl -sSL https://raw.githubusercontent.com/superbodik/PowerNode/main/install.sh)</pre>
     </div>
   </section>
 
   <section class="cta">
     <h2 class="cta-title reveal">Stop renting your infrastructure.</h2>
-    <a class="btn-primary btn-big reveal" href="https://github.com/superbodik/Roost" target="_blank" rel="noopener">Get Roost on GitHub →</a>
+    <a class="btn-primary btn-big reveal" href="https://github.com/superbodik/PowerNode" target="_blank" rel="noopener">Get PowerNode on GitHub →</a>
   </section>
 
 </main>
@@ -271,12 +276,13 @@
 <footer>
   <div class="footer-inner">
     <div class="brand footer-brand">
-      <span class="brand-mark">🐦</span><span class="brand-text">Roost</span>
+      <span class="brand-mark">⚡</span><span class="brand-text">PowerNode</span>
     </div>
     <div class="footer-links">
-      <a href="https://github.com/superbodik/Roost" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://github.com/superbodik/Roost/tree/main/docs" target="_blank" rel="noopener">Docs</a>
-      <a href="https://github.com/superbodik/Roost/releases/tag/v0.1.1" target="_blank" rel="noopener">v0.1.1</a>
+      <a href="https://powernode.pp.ua" target="_blank" rel="noopener">powernode.pp.ua</a>
+      <a href="https://github.com/superbodik/PowerNode" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/superbodik/PowerNode/tree/main/docs" target="_blank" rel="noopener">Docs</a>
+      <a href="https://github.com/superbodik/PowerNode/releases/tag/v0.1.1" target="_blank" rel="noopener">v0.1.1</a>
     </div>
     <div class="footer-note">Self-hosted. Open source. Built different.</div>
   </div>

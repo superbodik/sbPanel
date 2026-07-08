@@ -17,11 +17,11 @@ func ValidDomain(domain string) bool {
 }
 
 func configPath(domain string) string {
-	return sitesAvailable + "/roost-" + domain + ".conf"
+	return sitesAvailable + "/powernode-" + domain + ".conf"
 }
 
 func enabledPath(domain string) string {
-	return sitesEnabled + "/roost-" + domain + ".conf"
+	return sitesEnabled + "/powernode-" + domain + ".conf"
 }
 
 func AddDomain(domain string, port int, email string) (string, error) {

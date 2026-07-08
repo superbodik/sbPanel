@@ -25,8 +25,8 @@ select_language() {
 	esac
 }
 
-MSG_EN[menu_title]="Roost Installer"
-MSG_RU[menu_title]="Установщик Roost"
+MSG_EN[menu_title]="PowerNode Installer"
+MSG_RU[menu_title]="Установщик PowerNode"
 
 MSG_EN[menu_1]="Install Master Panel (Backend + Frontend + DB)"
 MSG_RU[menu_1]="Установить Мастер-панель (Backend + Frontend + БД)"

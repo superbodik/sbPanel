@@ -1,8 +1,8 @@
-# Roost landing page
+# PowerNode landing page
 
-Static marketing site for Roost. Zero dependencies — `app.py` is a stdlib-only
-static file server, so it runs on the panel's own "Python: Website" egg with no
-`requirements.txt` needed.
+Static marketing site for PowerNode. Zero dependencies — `app.py` is a
+stdlib-only static file server, so it runs on the panel's own "Python: Website"
+egg with no `requirements.txt` needed.
 
 ## Run locally
 
@@ -11,7 +11,7 @@ python app.py            # serves ./public on 0.0.0.0:8000
 PORT=3000 python app.py  # or pick a port
 ```
 
-## Deploy on Roost itself
+## Deploy on PowerNode itself
 
 1. Create a server using the **Python: Website** egg.
 2. Upload everything in this folder (`app.py`, `requirements.txt`, `public/`)
