@@ -12,6 +12,15 @@ export function ServerList({ onManage }: Props) {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.me().then((me) => setIsAdmin(me.is_admin)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,6 +78,51 @@ export function ServerList({ onManage }: Props) {
     }
   }
 
+  function toggleSelectMode() {
+    setSelectMode((v) => !v);
+    setSelected(new Set());
+  }
+
+  function toggleSelected(uuid: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(uuid)) next.delete(uuid);
+      else next.add(uuid);
+      return next;
+    });
+  }
+
+  async function runBulk(label: string, action: (uuid: string) => Promise<unknown>, confirmMsg?: string) {
+    if (selected.size === 0) return;
+    if (confirmMsg && !window.confirm(confirmMsg)) return;
+    setBulkBusy(true);
+    setBulkError(null);
+    const uuids = Array.from(selected);
+    const results = await Promise.allSettled(uuids.map((uuid) => action(uuid)));
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    setBulkBusy(false);
+    if (failed > 0) {
+      setBulkError(`${label}: ${uuids.length - failed} of ${uuids.length} succeeded, ${failed} failed.`);
+    }
+    setSelected(new Set());
+  }
+
+  const bulkPower = (action: PowerAction, confirmMsg?: string) =>
+    runBulk(action, (uuid) => api.power(uuid, action), confirmMsg);
+
+  function bulkBackup() {
+    const name = `bulk-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+    return runBulk('Backup', (uuid) => api.createServerBackup(uuid, name, []));
+  }
+
+  function bulkSuspend(suspend: boolean) {
+    return runBulk(
+      suspend ? 'Suspend' : 'Unsuspend',
+      (uuid) => (suspend ? api.suspendServer(uuid) : api.unsuspendServer(uuid)),
+      suspend ? `Suspend ${selected.size} server(s)? This stops them and blocks starting until unsuspended.` : undefined,
+    );
+  }
+
   if (loading) return <p className="srv-desc">Loading servers…</p>;
   if (error) return <div className="login-error show">{error}</div>;
 
@@ -99,11 +153,56 @@ export function ServerList({ onManage }: Props) {
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
+        <button className="btn-sm" onClick={toggleSelectMode}>
+          {selectMode ? 'Cancel selection' : 'Select servers'}
+        </button>
       </div>
+
+      {bulkError && <div className="login-error show" style={{ marginBottom: 16 }}>{bulkError}</div>}
+
+      {selectMode && selected.size > 0 && (
+        <div className="dash-toolbar" style={{ flexWrap: 'wrap', gap: 8 }}>
+          <span className="srv-desc">{selected.size} selected</span>
+          <button className="btn-sm" disabled={bulkBusy} onClick={() => bulkPower('start')}>
+            Start
+          </button>
+          <button className="btn-sm" disabled={bulkBusy} onClick={() => bulkPower('stop')}>
+            Stop
+          </button>
+          <button
+            className="btn-sm"
+            disabled={bulkBusy}
+            onClick={() => bulkPower('restart', `Restart ${selected.size} server(s)?`)}
+          >
+            Restart
+          </button>
+          <button className="btn-sm" disabled={bulkBusy} onClick={bulkBackup}>
+            Backup
+          </button>
+          {isAdmin && (
+            <>
+              <button className="btn-sm" disabled={bulkBusy} onClick={() => bulkSuspend(true)}>
+                Suspend
+              </button>
+              <button className="btn-sm" disabled={bulkBusy} onClick={() => bulkSuspend(false)}>
+                Unsuspend
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="servers-grid">
         {filtered.map((server) => (
-          <ServerCard key={server.uuid} server={server} onManage={onManage} onPower={handlePower} />
+          <ServerCard
+            key={server.uuid}
+            server={server}
+            onManage={onManage}
+            onPower={handlePower}
+            selectable={selectMode}
+            selected={selected.has(server.uuid)}
+            onToggleSelect={toggleSelected}
+          />
         ))}
         {filtered.length === 0 && <p className="srv-desc">No servers match your search.</p>}
       </div>

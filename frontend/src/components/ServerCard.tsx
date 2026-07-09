@@ -5,6 +5,9 @@ interface Props {
   server: Server;
   onManage: (uuid: string) => void;
   onPower: (uuid: string, action: PowerAction) => void;
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (uuid: string) => void;
 }
 
 function formatBytes(bytes: number): string {
@@ -19,19 +22,34 @@ function pct(used: number, limitMB: number): number {
   return Math.min(100, Math.round((used / limitBytes) * 100));
 }
 
-export function ServerCard({ server, onManage, onPower }: Props) {
+export function ServerCard({ server, onManage, onPower, selectable, selected, onToggleSelect }: Props) {
   const live = server.live;
   const cpuPct = live ? Math.min(100, Math.round(live.cpu_percent)) : 0;
   const memPct = live ? pct(live.memory_bytes, server.memory_mb) : 0;
   const diskPct = live ? pct(live.disk_bytes, server.disk_mb) : 0;
 
   return (
-    <div className="srv-card">
+    <div
+      className="srv-card"
+      onClick={selectable ? () => onToggleSelect?.(server.uuid) : undefined}
+      style={selectable ? { cursor: 'pointer', outline: selected ? '2px solid var(--pink-b)' : 'none' } : undefined}
+    >
       <div className="srv-card-head">
-        <div>
-          <div className="srv-name">{server.name}</div>
-          {server.description && <div className="srv-desc">{server.description}</div>}
-          {server.node_name && <div className="srv-node">{server.node_name}</div>}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          {selectable && (
+            <input
+              type="checkbox"
+              checked={!!selected}
+              onChange={() => onToggleSelect?.(server.uuid)}
+              onClick={(e) => e.stopPropagation()}
+              style={{ marginTop: 4 }}
+            />
+          )}
+          <div>
+            <div className="srv-name">{server.name}</div>
+            {server.description && <div className="srv-desc">{server.description}</div>}
+            {server.node_name && <div className="srv-node">{server.node_name}</div>}
+          </div>
         </div>
         <StatusBadge status={server.status} />
       </div>
@@ -44,7 +62,7 @@ export function ServerCard({ server, onManage, onPower }: Props) {
         <ResRow label="Disk" pct={diskPct} value={live ? formatBytes(live.disk_bytes) : '—'} />
       </div>
 
-      <div className="srv-card-foot">
+      <div className="srv-card-foot" onClick={(e) => e.stopPropagation()}>
         <button className="btn-manage" onClick={() => onManage(server.uuid)}>
           Manage
         </button>
