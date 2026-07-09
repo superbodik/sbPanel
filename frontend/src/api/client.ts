@@ -457,12 +457,12 @@ export const api = {
 export { storeTokens, clearTokens, tryRefresh };
 
 function wsToken(): string {
-  return localStorage.getItem('access_token') ?? '';
+  return localStorage.getItem('access_token') || 'no-token';
 }
 
 export function connectServerSocket(uuid: string): WebSocket {
   const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  return new WebSocket(`${proto}://${window.location.host}/ws/servers/${uuid}?token=${wsToken()}`);
+  return new WebSocket(`${proto}://${window.location.host}/ws/servers/${uuid}`, [wsToken()]);
 }
 
 export function connectServerSocketWithRetry<T>(
@@ -504,9 +504,7 @@ export function connectServerSocketWithRetry<T>(
 
 export function connectConsoleSocket(uuid: string): WebSocket {
   const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  return new WebSocket(
-    `${proto}://${window.location.host}/ws/servers/${uuid}/console?token=${wsToken()}`,
-  );
+  return new WebSocket(`${proto}://${window.location.host}/ws/servers/${uuid}/console`, [wsToken()]);
 }
 
 export interface ConsoleHandle {

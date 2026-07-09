@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/yourorg/panel/internal/api/handlers"
@@ -228,10 +229,11 @@ func NewRouter(deps Dependencies) http.Handler {
 }
 
 func authenticateWS(r *http.Request, tm *auth.TokenManager) (*auth.Claims, bool) {
-	token := r.URL.Query().Get("token")
-	if token == "" {
+	protocols := websocket.Subprotocols(r)
+	if len(protocols) == 0 {
 		return nil, false
 	}
+	token := protocols[0]
 	claims, err := tm.Parse(token)
 	if err != nil || claims.Type != auth.TokenAccess {
 		return nil, false

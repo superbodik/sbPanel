@@ -20,6 +20,16 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
+func subprotocolResponseHeader(r *http.Request) http.Header {
+	protocols := websocket.Subprotocols(r)
+	if len(protocols) == 0 {
+		return nil
+	}
+	header := http.Header{}
+	header.Set("Sec-WebSocket-Protocol", protocols[0])
+	return header
+}
+
 type consoleSession struct {
 	conn    *websocket.Conn
 	cancel  context.CancelFunc
@@ -49,7 +59,7 @@ func NewHub() *Hub {
 }
 
 func (h *Hub) ServeServerSocket(w http.ResponseWriter, r *http.Request, serverUUID uuid.UUID) {
-	conn, err := upgrader.Upgrade(w, r, nil)
+	conn, err := upgrader.Upgrade(w, r, subprotocolResponseHeader(r))
 	if err != nil {
 		log.Printf("ws upgrade failed: %v", err)
 		return
@@ -68,7 +78,7 @@ func (h *Hub) ServeServerSocket(w http.ResponseWriter, r *http.Request, serverUU
 }
 
 func (h *Hub) ServeConsoleSocket(w http.ResponseWriter, r *http.Request, serverUUID uuid.UUID) {
-	conn, err := upgrader.Upgrade(w, r, nil)
+	conn, err := upgrader.Upgrade(w, r, subprotocolResponseHeader(r))
 	if err != nil {
 		log.Printf("console ws upgrade failed: %v", err)
 		return
